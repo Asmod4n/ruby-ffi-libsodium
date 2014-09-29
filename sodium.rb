@@ -138,25 +138,25 @@ module Sodium
 end
 
 module Sodium
-  class Nonce
+  class Random
     extend Forwardable
 
-    def_delegators :@nonce, :address, :to_i
+    def_delegators :@random, :address, :to_i
 
     attr_reader :size
 
     def initialize(size)
       @size = size.to_int
-      @nonce = FFI::MemoryPointer.new(:uchar, @size)
-      Randombytes.buf(@nonce, @size)
+      @random = FFI::MemoryPointer.new(:uchar, @size)
+      Randombytes.buf(@random, @size)
     end
 
     def to_ptr
-      @nonce
+      @random
     end
 
     def to_str
-      @nonce.read_bytes(@size)
+      @random.read_bytes(@size)
     end
   end
 end
@@ -249,25 +249,23 @@ module Sodium
     NONCEBYTES  = noncebytes
     MACBYTES    = macbytes
 
-    attach_function :easy,      :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
-    attach_function :open_easy, :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
-      def generate_nonce
-        Nonce.new(NONCEBYTES)
+      def nonce
+        Random.new(NONCEBYTES)
       end
 
-      def generate_memory_locked_key
+      def memory_locked_key
         Key.new(KEYBYTES)
       end
 
-      def generate_key
-        key = FFI::MemoryPointer.new(:uchar, KEYBYTES)
-        Randombytes.buf(key, KEYBYTES)
-        key
+      def key
+        Random.new(KEYBYTES)
       end
 
-      def encrypt(data, nonce, key)
+      def easy(data, nonce, key)
         message = Utils.check_string(data)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
@@ -286,7 +284,7 @@ module Sodium
         ciphertext.read_bytes(ciphertext_len)
       end
 
-      def decrypt(data, nonce, key, utf8 = false)
+      def open_easy(data, nonce, key, utf8 = false)
         ciphertext = Utils.check_string(data)
         unless (message_len = ciphertext.bytesize - MACBYTES) > 0
           fail LengthError
@@ -322,47 +320,27 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
-    attach_function :seedbytes,       :crypto_box_seedbytes,      [], :size_t
-    attach_function :publickeybytes,  :crypto_box_publickeybytes, [], :size_t
-    attach_function :secretkeybytes,  :crypto_box_secretkeybytes, [], :size_t
-    attach_function :noncebytes,      :crypto_box_noncebytes,     [], :size_t
-    attach_function :macbytes,        :crypto_box_macbytes,       [], :size_t
+    attach_function :crypto_box_seedbytes,      [], :size_t
+    attach_function :crypto_box_publickeybytes, [], :size_t
+    attach_function :crypto_box_secretkeybytes, [], :size_t
+    attach_function :crypto_box_noncebytes,     [], :size_t
+    attach_function :crypto_box_macbytes,       [], :size_t
 
-    SEEDBYTES       = seedbytes
-    PUBLICKEYBYTES  = publickeybytes
-    SECRETKEYBYTES  = secretkeybytes
-    NONCEBYTES      = noncebytes
-    MACBYTES        = macbytes
+    SEEDBYTES       = crypto_box_seedbytes
+    PUBLICKEYBYTES  = crypto_box_publickeybytes
+    SECRETKEYBYTES  = crypto_box_secretkeybytes
+    NONCEBYTES      = crypto_box_noncebytes
+    MACBYTES        = crypto_box_macbytes
 
-    attach_function :keypair,         :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int, blocking: true
-    attach_function :seed_keypair,    :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
-    attach_function :scalarmult_base, :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int, blocking: true
+    attach_function :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int, blocking: true
+    attach_function :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
+    attach_function :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int, blocking: true
 
-    attach_function :easy,      :crypto_box_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
-    attach_function :open_easy, :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
-      def generate_keypair
-        public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
-        secret_key = FFI::MemoryPointer.new(:uchar, SECRETKEYBYTES)
-        if keypair(public_key, secret_key) == -1
-          fail CryptoError
-        end
-        [public_key, secret_key]
-      end
-
-      def public_key_from(secret_key)
-        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
-
-        public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
-        if scalarmult_base(public_key, secret_key) == -1
-          fail CryptoError
-        end
-
-        public_key
-      end
-
-      def encrypt(data, nonce, public_key, secret_key)
+      def easy(data, nonce, public_key, secret_key)
         message = Utils.check_string(data)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
@@ -385,7 +363,7 @@ module Sodium
         ciphertext.read_bytes(ciphertext_len)
       end
 
-      def decrypt(data, nonce, public_key, secret_key, utf8 = false)
+      def open_easy(data, nonce, public_key, secret_key, utf8 = false)
         ciphertext = Utils.check_string(ciphertext)
         unless (message_len = ciphertext.bytesize - MACBYTES) > 0
           fail LengthError
@@ -426,33 +404,33 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
-    attach_function :saltbytes,             :crypto_pwhash_scryptsalsa208sha256_saltbytes,            [], :size_t
-    attach_function :strbytes,              :crypto_pwhash_scryptsalsa208sha256_strbytes,             [], :size_t
-    attach_function :strprefix,             :crypto_pwhash_scryptsalsa208sha256_strprefix,            [], :string
-    attach_function :opslimit_interactive,  :crypto_pwhash_scryptsalsa208sha256_opslimit_interactive, [], :size_t
-    attach_function :memlimit_interactive,  :crypto_pwhash_scryptsalsa208sha256_memlimit_interactive, [], :size_t
-    attach_function :opslimit_sensitive,    :crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive,   [], :size_t
-    attach_function :memlimit_sensitive,    :crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive,   [], :size_t
+    attach_function :crypto_pwhash_scryptsalsa208sha256_saltbytes,            [], :size_t
+    attach_function :crypto_pwhash_scryptsalsa208sha256_strbytes,             [], :size_t
+    attach_function :crypto_pwhash_scryptsalsa208sha256_strprefix,            [], :string
+    attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_interactive, [], :size_t
+    attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_interactive, [], :size_t
+    attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive,   [], :size_t
+    attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive,   [], :size_t
 
-    SALTBYTES             = saltbytes
-    STRBYTES              = strbytes
-    STRPREFIX             = strprefix
-    OPSLIMIT_INTERACTIVE  = opslimit_interactive
-    MEMLIMIT_INTERACTIVE  = memlimit_interactive
-    OPSLIMIT_SENSITIVE    = opslimit_sensitive
-    MEMLIMIT_SENSITIVE    = memlimit_sensitive
+    SALTBYTES             = crypto_pwhash_scryptsalsa208sha256_saltbytes
+    STRBYTES              = crypto_pwhash_scryptsalsa208sha256_strbytes
+    STRPREFIX             = crypto_pwhash_scryptsalsa208sha256_strprefix
+    OPSLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_opslimit_interactive
+    MEMLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_memlimit_interactive
+    OPSLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive
+    MEMLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive
 
-    attach_function :scryptsalsa208sha256,            :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
-    attach_function :scryptsalsa208sha256_str,        :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
-    attach_function :scryptsalsa208sha256_str_verify, :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
+    attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
+    attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
+    attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
 
     class << self
-      def scrypt(data, outlen = Box::SEEDBYTES, salt = Nonce.new(SALTBYTES), opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+      def scrypt(data, outlen = Box::SEEDBYTES, salt = Random.new(SALTBYTES), opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd = Utils.check_string(data)
         Utils.check_length(salt, SALTBYTES, :Salt)
 
         out = Sodium.malloc(outlen)
-        if scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == -1
+        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == -1
           Sodium.free(out)
           fail MemoryError
         end
@@ -464,7 +442,7 @@ module Sodium
         passwd = Utils.check_string(data)
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        if scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
+        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
           fail MemoryError
         end
 
@@ -475,7 +453,7 @@ module Sodium
         Utils.check_length(str, STRBYTES, :Str)
         passwd = Utils.check_string(data)
 
-        scryptsalsa208sha256_str_verify(str, passwd, passwd.bytesize) == 0
+        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd.bytesize) == 0
       end
     end
   end
