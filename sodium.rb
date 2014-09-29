@@ -3,7 +3,7 @@
 module Sodium
   class CryptoError < StandardError; end
   class LengthError < ArgumentError; end
-  class MemoryError < StandardError; end
+  class MemoryError < ArgumentError; end
 
   extend FFI::Library
   ffi_lib :libsodium
@@ -431,6 +431,93 @@ module Sodium
         else
           decrypted.read_bytes(message_len)
         end
+      end
+    end
+  end
+end
+
+module Sodium
+  module Generichash
+    extend FFI::Library
+    ffi_lib :libsodium
+
+    attach_function :crypto_generichash_bytes_min,      [], :size_t
+    attach_function :crypto_generichash_bytes_max,      [], :size_t
+    attach_function :crypto_generichash_bytes,          [], :size_t
+    attach_function :crypto_generichash_keybytes_min,   [], :size_t
+    attach_function :crypto_generichash_keybytes_max,   [], :size_t
+    attach_function :crypto_generichash_keybytes,       [], :size_t
+
+    BYTES_MIN     = crypto_generichash_bytes_min
+    BYTES_MAX     = crypto_generichash_bytes_max
+    BYTES         = crypto_generichash_bytes
+    KEYBYTES_MIN  = crypto_generichash_keybytes_min
+    KEYBYTES_MAX  = crypto_generichash_keybytes_max
+    KEYBYTES      = crypto_generichash_keybytes
+
+    attach_function :crypto_generichash,  [:buffer_out, :size_t, :buffer_in, :ulong_long, :buffer_in, :size_t], :int
+
+    class State < FFI::Struct
+      pack 64
+      layout  :h,         [:uint64, 8],
+              :t,         [:uint64, 2],
+              :f,         [:uint64, 2],
+              :buf,       [:uint64, 2 * 128],
+              :buflen,    :size_t,
+              :last_node, :uint8
+    end
+
+    attach_function :crypto_generichash_init,   [State.ptr, :buffer_in, :size_t, :size_t],  :int
+    attach_function :crypto_generichash_update, [State.ptr, :buffer_in, :ulong_long],       :int
+    attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int
+
+    class << self
+      def hash(data, size = BYTES)
+        message = Utils.check_string(data)
+        if size > BYTES_MAX ||size < BYTES_MIN
+          fail LengthError
+        end
+
+        hash = FFI::MemoryPointer.new(:uchar, size)
+        if crypto_generichash(hash, hash.size, message, message.bytesize, nil, 0) == -1
+          fail CryptoError
+        end
+
+        hash.read_bytes(BYTES)
+      end
+
+      def init(size = BYTES)
+        if size > BYTES_MAX ||size < BYTES_MIN
+          fail LengthError
+        end
+
+        state = State.new
+        hash  = FFI::MemoryPointer.new(:uchar, size)
+        if crypto_generichash_init(state, nil, 0, hash.size) == -1
+          fail CryptoError
+        end
+
+        [state, hash]
+      end
+
+      def update(state, data)
+        Utils.check_pointer(state)
+        message = Utils.check_string(data)
+
+        if crypto_generichash_update(state, message, message.bytesize) == -1
+          fail CryptoError
+        end
+      end
+
+      def final(state, hash)
+        Utils.check_pointer(state)
+        Utils.check_pointer(hash)
+
+        if crypto_generichash_final(state, hash, hash.size) == -1
+          fail CryptoError
+        end
+
+        hash.read_bytes(hash.size)
       end
     end
   end
