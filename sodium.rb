@@ -85,27 +85,16 @@ module Sodium
   module Utils
     class << self
       def check_length(data, length, description)
-        case data
-        when String
+        if data.is_a?(String) ||data.respond_to?(:bytesize)
           unless data.bytesize == length.to_int
             fail LengthError, "Expected a #{length} bytes #{description}, got #{data.bytesize} bytes", caller
           end
-        when FFI::Pointer
+        elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
           unless data.size == length.to_int
             fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
           end
         else
-          if data.respond_to?(:bytesize)
-            unless data.bytesize == length.to_int
-              fail LengthError, "Expected a #{length} bytes #{description}, got #{data.bytesize} bytes", caller
-            end
-          elsif data.respond_to?(:size)
-            unless data.size == length.to_int
-              fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
-            end
-          else
-            fail ArgumentError, "#{description} must be of type String or FFI::Pointer and be #{length.to_int} bytes long", caller
-          end
+          fail ArgumentError, "#{description} must be of type String or FFI::Pointer and be #{length.to_int} bytes long", caller
         end
         true
       end
@@ -131,19 +120,12 @@ module Sodium
       end
 
       def check_size(data)
-        case data
-        when String
+        if data.is_a?(String) ||data.respond_to?(:bytesize)
           data.bytesize
-        when FFI::Pointer
+        elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
           data.site
         else
-          if data.respond_to?(:bytesize)
-            data.bytesize
-          elsif data.respond_to?(:size)
-            data.size
-          else
-            fail ArgumentError, "#{data.class} doesn't respond to :size or :bytesize", caller
-          end
+          fail ArgumentError, "#{data.class} doesn't respond to :size or :bytesize", caller
         end
       end
 
@@ -583,7 +565,6 @@ module Sodium
         if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
-        key_len = 0
 
         if key
           key_len = Utils.check_size(key)
@@ -591,6 +572,8 @@ module Sodium
           if key_len > KEYBYTES_MAX ||key_len < KEYBYTES_MIN
             fail LengthError
           end
+        else
+          key_len = 0
         end
 
         hash = FFI::MemoryPointer.new(:uchar, hash_size)
@@ -605,7 +588,6 @@ module Sodium
         if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
-        key_len = 0
 
         if key
           key_len = Utils.check_size(key)
@@ -613,6 +595,8 @@ module Sodium
           if key_len > KEYBYTES_MAX ||key_len < KEYBYTES_MIN
             fail LengthError
           end
+        else
+          key_len = 0
         end
 
         state = State.new
