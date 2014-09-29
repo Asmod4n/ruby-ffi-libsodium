@@ -4,70 +4,63 @@ module Sodium
   extend FFI::Library
   ffi_lib :libsodium
 
-  attach_function :init, :sodium_init, [], :int
-end
+  attach_function :init, :sodium_init, [], :int, blocking: true
 
-module Sodium
-  module Mem
-    extend FFI::Library
-    ffi_lib :libsodium
+  attach_function :memzero, :sodium_memzero,  [:pointer, :size_t],  :void,    blocking: true
+  attach_function :free,    :sodium_free,     [:pointer],           :void,    blocking: true
+  attach_function :sodium_mlock,              [:pointer, :size_t],  :int,     blocking: true
+  attach_function :sodium_munlock,            [:pointer, :size_t],  :int,     blocking: true
+  attach_function :sodium_malloc,             [:size_t],            :pointer, blocking: true
+  attach_function :sodium_allocarray,         [:size_t, :size_t],   :pointer, blocking: true
+  attach_function :sodium_mprotect_noaccess,  [:pointer],           :int,     blocking: true
+  attach_function :sodium_mprotect_readonly,  [:pointer],           :int,     blocking: true
+  attach_function :sodium_mprotect_readwrite, [:pointer],           :int,     blocking: true
 
-    attach_function :memzero, :sodium_memzero,  [:pointer, :size_t],  :void
-    attach_function :free,    :sodium_free,     [:pointer],           :void
-    attach_function :sodium_mlock,              [:pointer, :size_t],  :int
-    attach_function :sodium_munlock,            [:pointer, :size_t],  :int
-    attach_function :sodium_malloc,             [:size_t],            :pointer
-    attach_function :sodium_allocarray,         [:size_t, :size_t],   :pointer
-    attach_function :sodium_mprotect_noaccess,  [:pointer],           :int
-    attach_function :sodium_mprotect_readonly,  [:pointer],           :int
-    attach_function :sodium_mprotect_readwrite, [:pointer],           :int
-
-    class << self
-      def mlock(addr, len)
-        if sodium_mlock(addr, len) == -1
-          fail MemoryError
-        end
+  class << self
+    def mlock(addr, len)
+      if sodium_mlock(addr, len) == -1
+        fail MemoryError
       end
+    end
 
-      def munlock(addr, len)
-        if sodium_munlock(addr, len) == -1
-          fail MemoryError
-        end
+    def munlock(addr, len)
+      if sodium_munlock(addr, len) == -1
+        fail MemoryError
       end
+    end
 
-      def malloc(size)
-        unless (mem = sodium_malloc(size))
-          fail MemoryError
-        end
-        mem
+    def malloc(size)
+      unless (mem = sodium_malloc(size))
+        fail MemoryError
       end
+      mem
+    end
 
-      def allocarray(count, size)
-        unless (mem = sodium_allocarray(count, size))
-          fail MemoryError
-        end
-        mem
+    def allocarray(count, size)
+      unless (mem = sodium_allocarray(count, size))
+        fail MemoryError
       end
+      mem
+    end
 
-      def noaccess(ptr)
-        if sodium_mprotect_noaccess(ptr) == -1
-          free(ptr)
-          fail MemoryError
-        end
+    def noaccess(ptr)
+      if sodium_mprotect_noaccess(ptr) == -1
+        free(ptr)
+        fail MemoryError
       end
+    end
 
-      def readonly(ptr)
-        if sodium_mprotect_readonly(ptr) == -1
-          free(ptr)
-          fail MemoryError
-        end
+    def readonly(ptr)
+      if sodium_mprotect_readonly(ptr) == -1
+        free(ptr)
+        fail MemoryError
       end
+    end
 
-      def readwrite(ptr)
-        if sodium_mprotect_readwrite(ptr) == -1
-          free(ptr)
-          fail MemoryError
-        end
+    def readwrite(ptr)
+      if sodium_mprotect_readwrite(ptr) == -1
+        free(ptr)
+        fail MemoryError
       end
     end
   end
@@ -78,11 +71,11 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
-    attach_function :random,  :randombytes_random,  [],                     :uint32
-    attach_function :uniform, :randombytes_uniform, [:uint32],              :uint32
-    attach_function :buf,     :randombytes_buf,     [:buffer_in, :size_t],  :void
-    attach_function :close,   :randombytes_close,   [],                     :int
-    attach_function :stir,    :randombytes_stir,    [],                     :void
+    attach_function :random,  :randombytes_random,  [],                     :uint32,  blocking: true
+    attach_function :uniform, :randombytes_uniform, [:uint32],              :uint32,  blocking: true
+    attach_function :buf,     :randombytes_buf,     [:buffer_in, :size_t],  :void,    blocking: true
+    attach_function :close,   :randombytes_close,   [],                     :int,     blocking: true
+    attach_function :stir,    :randombytes_stir,    [],                     :void,    blocking: true
   end
 end
 
@@ -121,13 +114,13 @@ module Sodium
         true
       end
 
-      def check_ptr(obj)
-        if obj.is_a?(FFI::Pointer)
-          obj
-        elsif obj.respond_to?(:to_ptr)
-          obj.to_ptr
+      def check_pointer(ptr)
+        if ptr.is_a?(FFI::Pointer)
+          ptr
+        elsif ptr.respond_to?(:to_ptr)
+          ptr.to_ptr
         else
-          fail ArgumentError, "#{obj.class} is not a FFI::Pointer", caller
+          fail ArgumentError, "#{ptr.class} is not a FFI::Pointer", caller
         end
       end
 
@@ -161,10 +154,6 @@ module Sodium
     def to_ptr
       @nonce
     end
-
-    def to_str
-      @nonce.read_bytes(@size)
-    end
   end
 end
 
@@ -177,19 +166,18 @@ module Sodium
     attr_reader :size
 
     def self.from_passphrase(passphrase, size)
-      unless passphrase.is_a?(FFI::Pointer)
-        fail ArgumentError
-      end
+      passphrase_ptr = Utils.check_pointer(passphrase)
       instance = allocate
       instance.instance_variable_set(:@size, size.to_int)
-      instance.instance_variable_set(:@key, passphrase)
+      instance.instance_variable_set(:@key, passphrase_ptr)
+      instance.noaccess
       instance.setup_finalizer
       instance
     end
 
     def initialize(size)
       @size = size.to_int
-      @key = Mem.malloc(@size)
+      @key = Sodium.malloc(@size)
       Randombytes.buf(@key, @size)
       noaccess
       setup_finalizer
@@ -199,28 +187,22 @@ module Sodium
       @key
     end
 
-    def to_str
-      readonly
-      str = @key.read_bytes(@size)
-      noaccess
-      str
-    end
-
     def free
       remove_finalizer
-      Mem.free(@key)
+      readwrite
+      Sodium.free(@key)
     end
 
     def noaccess
-      Mem.noaccess(@key)
+      Sodium.noaccess(@key)
     end
 
     def readonly
-      Mem.readonly(@key)
+      Sodium.readonly(@key)
     end
 
     def readwrite
-      Mem.readwrite(@key)
+      Sodium.readwrite(@key)
     end
 
     def setup_finalizer
@@ -235,6 +217,7 @@ module Sodium
 
     def self.free(key)
       ->(obj_id) do
+        Sodium.readwrite(key)
         Sodium.free(key)
         true
       end
@@ -255,8 +238,8 @@ module Sodium
     NONCEBYTES  = noncebytes
     MACBYTES    = macbytes
 
-    attach_function :easy,      :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
-    attach_function :open_easy, :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
+    attach_function :easy,      :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :open_easy, :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
       def generate_nonce
@@ -275,10 +258,7 @@ module Sodium
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
 
-        key.readonly if key.is_a?(Key)
-        rc = easy(ciphertext, message, message.bytesize, nonce, key)
-        key.noaccess if key.is_a?(Key)
-        if rc == -1
+        if easy(ciphertext, message, message.bytesize, nonce, key) == -1
           key.free if key.is_a?(Key)
           fail CryptoError
         end
@@ -297,10 +277,7 @@ module Sodium
 
         decrypted = FFI::MemoryPointer.new(:uchar, message_len)
 
-        key.readonly if key.is_a?(Key)
-        rc = open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key)
-        key.noaccess if key.is_a?(Key)
-        if rc == -1
+        if open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key) == -1
           key.free if key.is_a?(Key)
           fail CryptoError
         end
@@ -334,12 +311,12 @@ module Sodium
     NONCEBYTES      = noncebytes
     MACBYTES        = macbytes
 
-    attach_function :keypair,         :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int
-    attach_function :seed_keypair,    :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int
-    attach_function :scalarmult_base, :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int
+    attach_function :keypair,         :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int, blocking: true
+    attach_function :seed_keypair,    :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
+    attach_function :scalarmult_base, :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int, blocking: true
 
-    attach_function :easy,      :crypto_box_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int
-    attach_function :open_easy, :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int
+    attach_function :easy,      :crypto_box_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :open_easy, :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
       def generate_keypair
@@ -353,35 +330,34 @@ module Sodium
 
       def public_key_from(secret_key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+
         public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
         if scalarmult_base(public_key, secret_key) == -1
           fail CryptoError
         end
+
         public_key
       end
 
       def encrypt(data, nonce, public_key, secret_key)
         message = Utils.check_string(data)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
-        nonce_ptr = Utils.check_ptr(nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
-        public_key_ptr = Utils.check_ptr(public_key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
-        secret_key_ptr = Utils.check_ptr(secret_key)
-
-        ciphertext_len = MACBYTES + message.bytesize
-        ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
 
         public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
-        rc = easy(ciphertext, message, message.bytesize, nonce_ptr, public_key_ptr, secret_key_ptr)
-        public_key.noaccess if public_key.is_a?(Key)
-        secret_key.noaccess if secret_key.is_a?(Key)
-        if rc == -1
+
+        ciphertext_len = MACBYTES + message.bytesize
+        ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
+        if easy(ciphertext, message, message.bytesize, nonce, public_key, secret_key) == -1
           public_key.free if public_key.is_a?(Key)
           secret_key.free if secret_key.is_a?(Key)
           fail CryptoError
         end
+
+        public_key.noaccess if public_key.is_a?(Key)
+        secret_key.noaccess if secret_key.is_a?(Key)
 
         ciphertext.read_bytes(ciphertext_len)
       end
@@ -393,24 +369,21 @@ module Sodium
         end
 
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
-        nonce_ptr = Utils.check_ptr(nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
-        public_key_ptr = Utils.check_ptr(public_key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
-        secret_key_ptr = Utils.check_ptr(secret_key)
-
-        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
 
         public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
-        rc = open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce_ptr, public_key_ptr, secret_key_ptr)
-        public_key.noaccess if public_key.is_a?(Key)
-        secret_key.noaccess if secret_key.is_a?(Key)
-        if rc == -1
+
+        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
+        if open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key) == -1
           public_key.free if public_key.is_a?(Key)
           secret_key.free if secret_key.is_a?(Key)
           fail CryptoError
         end
+
+        public_key.noaccess if public_key.is_a?(Key)
+        secret_key.noaccess if secret_key.is_a?(Key)
 
         if utf8
           str = decrypted.read_bytes(message_len)
@@ -426,6 +399,7 @@ end
 
 module Sodium
   module Pwhash_ScryptSalsa208sha256
+    PACK_CHAR = 'c*'.freeze
     extend FFI::Library
     ffi_lib :libsodium
 
@@ -445,24 +419,40 @@ module Sodium
     OPSLIMIT_SENSITIVE    = opslimit_sensitive
     MEMLIMIT_SENSITIVE    = memlimit_sensitive
 
-    attach_function :scryptsalsa208sha256,            :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int
-    attach_function :scryptsalsa208sha256_str,        :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int
-    attach_function :scryptsalsa208sha256_str_verify, :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int
+    attach_function :scryptsalsa208sha256,            :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
+    attach_function :scryptsalsa208sha256_str,        :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
+    attach_function :scryptsalsa208sha256_str_verify, :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
 
     class << self
       def scrypt(data, outlen = Box::SEEDBYTES, salt = Nonce.new(SALTBYTES), opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd = Utils.check_string(data)
         Utils.check_length(salt, SALTBYTES, :Salt)
-        salt_ptr = Utils.check_ptr(salt)
-        out = Mem.malloc(outlen)
-        rc = scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt_ptr, opslimit, memlimit)
-        Mem.noaccess(out)
-        if rc == -1
-          Mem.free(out)
+
+        out = Sodium.malloc(outlen)
+        if scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == -1
+          Sodium.free(out)
           fail MemoryError
         end
 
         Key.from_passphrase(out, outlen)
+      end
+
+      def str(data, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+        passwd = Utils.check_string(data)
+
+        hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
+        if scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
+          fail MemoryError
+        end
+
+        hashed_password.read_array_of_char(STRBYTES).pack(PACK_CHAR)
+      end
+
+      def str_verify(str, data)
+        Utils.check_length(str, STRBYTES, :Str)
+        passwd = Utils.check_string(data)
+
+        scryptsalsa208sha256_str_verify(str, passwd, passwd.bytesize) == 0
       end
     end
   end
