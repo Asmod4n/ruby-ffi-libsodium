@@ -97,17 +97,16 @@ module Sodium
     class << self
       def check_length(data, length, description)
         case data
-          when FFI::Pointer
-            unless data.size == length.to_int
-              fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
-            end
-          when String
-            unless data.bytesize == length.to_int
-              fail LengthError, "Expected a #{length} bytes #{description}, got #{data.bytesize} bytes", caller
-            end
+        when FFI::Pointer
+          unless data.size == length.to_int
+            fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
+          end
+        when String
+          unless data.bytesize == length.to_int
+            fail LengthError, "Expected a #{length} bytes #{description}, got #{data.bytesize} bytes", caller
           end
         else
-          if data.respond_to(:size)
+          if data.respond_to?(:size)
             unless data.size == length.to_int
               fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
             end
@@ -116,10 +115,20 @@ module Sodium
               fail LengthError, "Expected a #{length} bytes #{description}, got #{data.to_str.bytesize} bytes", caller
             end
           else
-            fail ArgumentError, "#{description} must be of type FFI::Pointer or String  or respond to size and be #{length.to_int} bytes long", caller
+            fail ArgumentError, "#{description} must be of type FFI::Pointer or String and be #{length.to_int} bytes long", caller
           end
         end
         true
+      end
+
+      def check_ptr(obj)
+        if obj.is_a?(FFI::Pointer)
+          obj
+        elsif obj.respond_to?(:to_ptr)
+          obj.to_ptr
+        else
+          fail ArgumentError, "#{obj.class} is not a FFI::Pointer", caller
+        end
       end
 
       def check_string(string)
@@ -147,6 +156,10 @@ module Sodium
       @size = size.to_int
       @nonce = FFI::MemoryPointer.new(:uchar, @size)
       Randombytes.buf(@nonce, @size)
+    end
+
+    def to_ptr
+      @nonce
     end
 
     def to_str
@@ -182,6 +195,10 @@ module Sodium
       setup_finalizer
     end
 
+    def to_ptr
+      @key
+    end
+
     def to_str
       readonly
       str = @key.read_bytes(@size)
@@ -190,8 +207,8 @@ module Sodium
     end
 
     def free
-      Mem.free(@key)
       remove_finalizer
+      Mem.free(@key)
     end
 
     def noaccess
@@ -218,7 +235,7 @@ module Sodium
 
     def self.free(key)
       ->(obj_id) do
-        Mem.free(key)
+        Sodium.free(key)
         true
       end
     end
@@ -346,16 +363,18 @@ module Sodium
       def encrypt(data, nonce, public_key, secret_key)
         message = Utils.check_string(data)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
+        nonce_ptr = Utils.check_ptr(nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
+        public_key_ptr = Utils.check_ptr(public_key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
-
+        secret_key_ptr = Utils.check_ptr(secret_key)
 
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
 
         public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
-        rc = easy(ciphertext, message, message.bytesize, nonce, public_key, secret_key)
+        rc = easy(ciphertext, message, message.bytesize, nonce_ptr, public_key_ptr, secret_key_ptr)
         public_key.noaccess if public_key.is_a?(Key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
@@ -374,14 +393,17 @@ module Sodium
         end
 
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
+        nonce_ptr = Utils.check_ptr(nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
+        public_key_ptr = Utils.check_ptr(public_key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+        secret_key_ptr = Utils.check_ptr(secret_key)
 
         decrypted = FFI::MemoryPointer.new(:uchar, message_len)
 
         public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
-        rc = open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
+        rc = open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce_ptr, public_key_ptr, secret_key_ptr)
         public_key.noaccess if public_key.is_a?(Key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
@@ -431,12 +453,13 @@ module Sodium
       def scrypt(data, outlen = Box::SEEDBYTES, salt = Nonce.new(SALTBYTES), opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd = Utils.check_string(data)
         Utils.check_length(salt, SALTBYTES, :Salt)
+        salt_ptr = Utils.check_ptr(salt)
         out = Mem.malloc(outlen)
-        rc = scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit)
+        rc = scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt_ptr, opslimit, memlimit)
         Mem.noaccess(out)
         if rc == -1
           Mem.free(out)
-          raise MemoryError
+          fail MemoryError
         end
 
         Key.from_passphrase(out, outlen)
