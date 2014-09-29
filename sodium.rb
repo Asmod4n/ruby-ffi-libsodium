@@ -368,15 +368,13 @@ module Sodium
 
       def memory_locked_keypair
         public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
-        secret_key = Key.new(SECRETKEYBYTES)
-        secret_key.readonly
-        rc = crypto_scalarmult_base(public_key, secret_key)
-        secret_key.noaccess
-        if rc == -1
+        secret_key = Sodium.malloc(SECRETKEYBYTES)
+        if crypto_box_keypair(public_key, secret_key) == -1
+          Sodium.free(secret_key)
           fail CryptoError
         end
 
-        [public_key, secret_key]
+        [public_key, Key.from_ptr(secret_key, SECRETKEYBYTES)]
       end
 
       def easy(data, nonce, public_key, secret_key)
@@ -387,10 +385,8 @@ module Sodium
 
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
-        public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
         rc = crypto_box_easy(ciphertext, message, message.bytesize, nonce, public_key, secret_key)
-        public_key.noaccess if public_key.is_a?(Key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
           fail CryptoError
@@ -407,10 +403,8 @@ module Sodium
 
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
-        public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
         rc = crypto_box_easy(message, message, message_len, nonce, public_key, secret_key)
-        public_key.noaccess if public_key.is_a?(Key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
           fail CryptoError
@@ -430,10 +424,8 @@ module Sodium
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
         decrypted = FFI::MemoryPointer.new(:uchar, message_len)
-        public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
         rc = crypto_box_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
-        public_key.noaccess if public_key.is_a?(Key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
           fail CryptoError
