@@ -8,7 +8,7 @@ module Sodium
   extend FFI::Library
   ffi_lib :libsodium
 
-  attach_function :init, :sodium_init, [], :int, blocking: true
+  attach_function :init, :sodium_init, [], :int
 
   attach_function :memcmp,  :sodium_memcmp,   [:buffer_in, :buffer_in, :size_t],  :int
   attach_function :memzero, :sodium_memzero,  [:pointer, :size_t],  :void,    blocking: true
@@ -131,20 +131,19 @@ module Sodium
       end
 
       def check_size(data)
-        if data.is_a?(FFI::Pointer)
-          data.size
-        elsif data.respond_to?(:to_ptr)
-          data.to_ptr.size
-        elsif data.is_a?(String)
+        case data
+        when FFI::Pointer
+          data.site
+        when String
           data.bytesize
-        elsif data.respond_to?(:to_str)
-          data.to_str.bytesize
-        elsif data.respond?(:bytesize)
-          data.bytesize
-        elsif data.respond?(:size)
-          data.size
         else
-          fail ArgumentError, "#{data.class} doesn't respond to :size or :bytesize", caller
+          if data.respond_to?(:bytesize)
+            data.bytesize
+          elsif data.respond_to?(:size)
+            data.size
+          else
+            fail ArgumentError, "#{data.class} doesn't respond to :size or :bytesize", caller
+          end
         end
       end
 
@@ -271,19 +270,14 @@ module Sodium
     attach_function :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
-      def key
-        Random.new(KEYBYTES)
+      def nonce
+        Random.new(NONCEBYTES)
       end
 
-      def memory_locked_key
-        Key.new(KEYBYTES)
-      end
-
-      def easy(data, key)
+      def easy(data, nonce, key)
         message = Utils.check_string(data)
+        Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
-
-        nonce = Random.new(NONCEBYTES)
 
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
@@ -294,14 +288,13 @@ module Sodium
           fail CryptoError
         end
 
-        [ciphertext.read_bytes(ciphertext_len), nonce]
+        ciphertext.read_bytes(ciphertext_len)
       end
 
-      def easy_in_place(data, key)
+      def easy_in_place(data, nonce, key)
         message = Utils.check_string(data)
+        Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
-
-        nonce = Random.new(NONCEBYTES)
 
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
@@ -312,7 +305,7 @@ module Sodium
           fail CryptoError
         end
 
-        [message, nonce]
+        message
       end
 
       def open_easy(data, nonce, key, utf8 = false)
@@ -380,11 +373,7 @@ module Sodium
     attach_function :crypto_auth_verify,  [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int
 
     class << self
-      def key
-        Key.new(KEYBYTES)
-      end
-
-      def auth(data, key = key)
+      def auth(data, key)
         message = Utils.check_string(data)
         Utils.check_length(key, KEYBYTES, :Key)
 
@@ -396,7 +385,7 @@ module Sodium
           fail CryptoError
         end
 
-        [mac.read_bytes(BYTES), key]
+        mac.read_bytes(BYTES)
       end
 
       def verify(mac, data, key)
@@ -439,6 +428,10 @@ module Sodium
     attach_function :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
+      def nonce
+        Random.new(NONCEBYTES)
+      end
+
       def keypair
         public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
         secret_key = FFI::MemoryPointer.new(:uchar, SECRETKEYBYTES)
@@ -460,12 +453,11 @@ module Sodium
         [public_key, Key.from_ptr(secret_key, SECRETKEYBYTES)]
       end
 
-      def easy(data, public_key, secret_key)
+      def easy(data, nonce, public_key, secret_key)
         message = Utils.check_string(data)
+        Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
-
-        nonce = Random.new(NONCEBYTES)
 
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
@@ -476,15 +468,15 @@ module Sodium
           fail CryptoError
         end
 
-        [ciphertext.read_bytes(ciphertext_len), nonce]
+        ciphertext.read_bytes(ciphertext_len)
       end
 
-      def easy_in_place(data, public_key, secret_key)
+      def easy_in_place(data, nonce, public_key, secret_key)
         message = Utils.check_string(data)
+        Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
-        nonce = Random.new(NONCEBYTES)
 
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
@@ -495,7 +487,7 @@ module Sodium
           fail CryptoError
         end
 
-        [message, nonce]
+        message
       end
 
       def open_easy(data, nonce, public_key, secret_key, utf8 = false)
@@ -569,7 +561,7 @@ module Sodium
     KEYBYTES_MAX  = crypto_generichash_keybytes_max
     KEYBYTES      = crypto_generichash_keybytes
 
-    attach_function :crypto_generichash,  [:buffer_out, :size_t, :buffer_in, :ulong_long, :buffer_in, :size_t], :int
+    attach_function :crypto_generichash,  [:buffer_out, :size_t, :buffer_in, :ulong_long, :buffer_in, :size_t], :int, blocking: true
 
     class State < FFI::Struct
       pack 64
@@ -581,9 +573,9 @@ module Sodium
               :last_node, :uint8
     end
 
-    attach_function :crypto_generichash_init,   [State.ptr, :buffer_in, :size_t, :size_t],  :int
-    attach_function :crypto_generichash_update, [State.ptr, :buffer_in, :ulong_long],       :int
-    attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int
+    attach_function :crypto_generichash_init,   [State.ptr, :buffer_in, :size_t, :size_t],  :int, blocking: true
+    attach_function :crypto_generichash_update, [State.ptr, :buffer_in, :ulong_long],       :int, blocking: true
+    attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int, blocking: true
 
     class << self
       def hash(data, hash_size = BYTES, key = nil)
@@ -680,7 +672,11 @@ module Sodium
     attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
 
     class << self
-      def scrypt(data, outlen = Auth::KEYBYTES, salt = Random.new(SALTBYTES), opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+      def salt
+        Random.new(SALTBYTES)
+      end
+
+      def scrypt(data, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd = Utils.check_string(data)
         Utils.check_length(salt, SALTBYTES, :Salt)
 
@@ -690,7 +686,7 @@ module Sodium
           fail NoMemoryError
         end
 
-        [Key.from_ptr(out, outlen), salt]
+        Key.from_ptr(out, outlen)
       end
 
       def str(data, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
