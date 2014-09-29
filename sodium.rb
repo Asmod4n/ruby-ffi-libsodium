@@ -3,13 +3,14 @@
 module Sodium
   class CryptoError < StandardError; end
   class LengthError < ArgumentError; end
-  class MemoryError < ArgumentError; end
+  class MemoryError < StandardError; end
 
   extend FFI::Library
   ffi_lib :libsodium
 
   attach_function :init, :sodium_init, [], :int, blocking: true
 
+  attach_function :memcmp,  :sodium_memcmp,   [:buffer_in, :buffer_in, :size_t],  :int
   attach_function :memzero, :sodium_memzero,  [:pointer, :size_t],  :void,    blocking: true
   attach_function :free,    :sodium_free,     [:pointer],           :void,    blocking: true
   attach_function :sodium_mlock,              [:pointer, :size_t],  :int,     blocking: true
@@ -270,15 +271,13 @@ module Sodium
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
-        key.readonly if key.is_a?(Key)
-
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
-        if crypto_secretbox_easy(ciphertext, message, message.bytesize, nonce, key) == -1
-          key.free if key.is_a?(Key)
+        key.readonly if key.is_a?(Key)
+        rc = crypto_secretbox_easy(ciphertext, message, message.bytesize, nonce, key)
+        key.noaccess if key.is_a?(Key)
+        if rc == -1
           fail CryptoError
-        else
-          key.noaccess if key.is_a?(Key)
         end
 
         ciphertext.read_bytes(ciphertext_len)
@@ -289,15 +288,13 @@ module Sodium
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
-        key.readonly if key.is_a?(Key)
-
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
-        if crypto_secretbox_easy(message, message, message_len, nonce, key) == -1
-          key.free if key.is_a?(Key)
+        key.readonly if key.is_a?(Key)
+        rc = crypto_secretbox_easy(message, message, message_len, nonce, key)
+        key.noaccess if key.is_a?(Key)
+        if rc == -1
           fail CryptoError
-        else
-          key.noaccess if key.is_a?(Key)
         end
 
         message
@@ -312,14 +309,12 @@ module Sodium
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
-        key.readonly if key.is_a?(Key)
-
         decrypted = FFI::MemoryPointer.new(:uchar, message_len)
-        if crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key) == -1
-          key.free if key.is_a?(Key)
+        key.readonly if key.is_a?(Key)
+        rc = crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key)
+        key.noaccess if key.is_a?(Key)
+        if rc == -1
           fail CryptoError
-        else
-          key.noaccess if key.is_a?(Key)
         end
 
         if utf8
@@ -363,18 +358,15 @@ module Sodium
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
-        public_key.readonly if public_key.is_a?(Key)
-        secret_key.readonly if secret_key.is_a?(Key)
-
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
-        if crypto_box_easy(ciphertext, message, message.bytesize, nonce, public_key, secret_key) == -1
-          public_key.free if public_key.is_a?(Key)
-          secret_key.free if secret_key.is_a?(Key)
+        public_key.readonly if public_key.is_a?(Key)
+        secret_key.readonly if secret_key.is_a?(Key)
+        rc = crypto_box_easy(ciphertext, message, message.bytesize, nonce, public_key, secret_key)
+        public_key.noaccess if public_key.is_a?(Key)
+        secret_key.noaccess if secret_key.is_a?(Key)
+        if rc == -1
           fail CryptoError
-        else
-          public_key.noaccess if public_key.is_a?(Key)
-          secret_key.noaccess if secret_key.is_a?(Key)
         end
 
         ciphertext.read_bytes(ciphertext_len)
@@ -386,18 +378,15 @@ module Sodium
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
-        public_key.readonly if public_key.is_a?(Key)
-        secret_key.readonly if secret_key.is_a?(Key)
-
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
-        if crypto_box_easy(message, message, message_len, nonce, public_key, secret_key) == -1
-          public_key.free if public_key.is_a?(Key)
-          secret_key.free if secret_key.is_a?(Key)
+        public_key.readonly if public_key.is_a?(Key)
+        secret_key.readonly if secret_key.is_a?(Key)
+        rc = crypto_box_easy(message, message, message_len, nonce, public_key, secret_key)
+        public_key.noaccess if public_key.is_a?(Key)
+        secret_key.noaccess if secret_key.is_a?(Key)
+        if rc == -1
           fail CryptoError
-        else
-          public_key.noaccess if public_key.is_a?(Key)
-          secret_key.noaccess if secret_key.is_a?(Key)
         end
 
         message
@@ -413,17 +402,14 @@ module Sodium
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
+        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
         public_key.readonly if public_key.is_a?(Key)
         secret_key.readonly if secret_key.is_a?(Key)
-
-        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
-        if crypto_box_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key) == -1
-          public_key.free if public_key.is_a?(Key)
-          secret_key.free if secret_key.is_a?(Key)
+        rc = crypto_box_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
+        public_key.noaccess if public_key.is_a?(Key)
+        secret_key.noaccess if secret_key.is_a?(Key)
+        if rc == -1
           fail CryptoError
-        else
-          public_key.noaccess if public_key.is_a?(Key)
-          secret_key.noaccess if secret_key.is_a?(Key)
         end
 
         if utf8
@@ -462,7 +448,7 @@ module Sodium
       layout  :h,         [:uint64, 8],
               :t,         [:uint64, 2],
               :f,         [:uint64, 2],
-              :buf,       [:uint8, 2 * 128],
+              :buf,       [:uint64, 2 * 128],
               :buflen,    :size_t,
               :last_node, :uint8
     end
@@ -479,11 +465,11 @@ module Sodium
         end
 
         hash = FFI::MemoryPointer.new(:uchar, size)
-        if crypto_generichash(hash, size, message, message.bytesize, nil, 0) == -1
+        if crypto_generichash(hash, hash.size, message, message.bytesize, nil, 0) == -1
           fail CryptoError
         end
 
-        hash.read_bytes(size)
+        hash.read_bytes(BYTES)
       end
 
       def init(size = BYTES)
@@ -493,7 +479,7 @@ module Sodium
 
         state = State.new
         hash  = FFI::MemoryPointer.new(:uchar, size)
-        if crypto_generichash_init(state, nil, 0, size) == -1
+        if crypto_generichash_init(state, nil, 0, hash.size) == -1
           fail CryptoError
         end
 
