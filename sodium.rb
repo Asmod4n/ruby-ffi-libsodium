@@ -8,7 +8,7 @@ module Sodium
   extend FFI::Library
   ffi_lib :libsodium
 
-  attach_function :init, :sodium_init, [], :int
+  attach_function :init,  :sodium_init, [], :int,  blocking: true
 
   attach_function :memcmp,  :sodium_memcmp,   [:buffer_in, :buffer_in, :size_t],  :int
   attach_function :memzero, :sodium_memzero,  [:pointer, :size_t],  :void,    blocking: true
@@ -86,25 +86,25 @@ module Sodium
     class << self
       def check_length(data, length, description)
         case data
-        when FFI::Pointer
-          unless data.size == length.to_int
-            fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
-          end
         when String
           unless data.bytesize == length.to_int
             fail LengthError, "Expected a #{length} bytes #{description}, got #{data.bytesize} bytes", caller
           end
+        when FFI::Pointer
+          unless data.size == length.to_int
+            fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
+          end
         else
-          if data.respond_to?(:size)
+          if data.respond_to?(:bytesize)
+            unless data.bytesize == length.to_int
+              fail LengthError, "Expected a #{length} bytes #{description}, got #{data.bytesize} bytes", caller
+            end
+          elsif data.respond_to?(:size)
             unless data.size == length.to_int
               fail LengthError, "Expected a #{length} bytes #{description}, got #{data.size} bytes", caller
             end
-          elsif data.respond_to?(:to_str)
-            unless data.to_str.bytesize == length.to_int
-              fail LengthError, "Expected a #{length} bytes #{description}, got #{data.to_str.bytesize} bytes", caller
-            end
           else
-            fail ArgumentError, "#{description} must be of type FFI::Pointer or String and be #{length.to_int} bytes long", caller
+            fail ArgumentError, "#{description} must be of type String or FFI::Pointer and be #{length.to_int} bytes long", caller
           end
         end
         true
@@ -132,10 +132,10 @@ module Sodium
 
       def check_size(data)
         case data
-        when FFI::Pointer
-          data.site
         when String
           data.bytesize
+        when FFI::Pointer
+          data.site
         else
           if data.respond_to?(:bytesize)
             data.bytesize
@@ -583,6 +583,7 @@ module Sodium
         if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
+        key_len = 0
 
         if key
           key_len = Utils.check_size(key)
@@ -604,6 +605,7 @@ module Sodium
         if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
+        key_len = 0
 
         if key
           key_len = Utils.check_size(key)
