@@ -141,9 +141,7 @@ module Sodium
   class Random
     extend Forwardable
 
-    def_delegators :@random, :address, :to_i
-
-    attr_reader :size
+    def_delegators :@random, :address, :to_i, :size
 
     def initialize(size)
       @size = size.to_int
@@ -169,11 +167,11 @@ module Sodium
 
     attr_reader :size
 
-    def self.from_passphrase(passphrase, size)
-      passphrase_ptr = Utils.check_pointer(passphrase)
+    def self.from_ptr(data, size)
+      ptr = Utils.check_pointer(data)
       instance = allocate
       instance.instance_variable_set(:@size, size.to_int)
-      instance.instance_variable_set(:@key, passphrase_ptr)
+      instance.instance_variable_set(:@key, ptr)
       instance.noaccess
       instance.setup_finalizer
       instance
@@ -199,9 +197,11 @@ module Sodium
     end
 
     def free
+      @size = nil
       remove_finalizer
       readwrite
       Sodium.free(@key)
+      @key = nil
     end
 
     def noaccess
@@ -241,13 +241,13 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
-    attach_function :keybytes,    :crypto_secretbox_keybytes,   [], :size_t
-    attach_function :noncebytes,  :crypto_secretbox_noncebytes, [], :size_t
-    attach_function :macbytes,    :crypto_secretbox_macbytes,   [], :size_t
+    attach_function :crypto_secretbox_keybytes,   [], :size_t
+    attach_function :crypto_secretbox_noncebytes, [], :size_t
+    attach_function :crypto_secretbox_macbytes,   [], :size_t
 
-    KEYBYTES    = keybytes
-    NONCEBYTES  = noncebytes
-    MACBYTES    = macbytes
+    KEYBYTES    = crypto_secretbox_keybytes
+    NONCEBYTES  = crypto_secretbox_noncebytes
+    MACBYTES    = crypto_secretbox_macbytes
 
     attach_function :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
     attach_function :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
@@ -435,7 +435,7 @@ module Sodium
           fail MemoryError
         end
 
-        Key.from_passphrase(out, outlen)
+        Key.from_ptr(out, outlen)
       end
 
       def str(data, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
