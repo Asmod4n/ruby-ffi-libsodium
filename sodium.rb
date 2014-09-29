@@ -258,12 +258,12 @@ module Sodium
         Random.new(NONCEBYTES)
       end
 
-      def memory_locked_key
-        Key.new(KEYBYTES)
-      end
-
       def key
         Random.new(KEYBYTES)
+      end
+
+      def memory_locked_key
+        Key.new(KEYBYTES)
       end
 
       def easy(data, nonce, key)
@@ -484,11 +484,11 @@ module Sodium
         end
 
         hash = FFI::MemoryPointer.new(:uchar, size)
-        if crypto_generichash(hash, hash.size, message, message.bytesize, nil, 0) == -1
+        if crypto_generichash(hash, size, message, message.bytesize, nil, 0) == -1
           fail CryptoError
         end
 
-        hash.read_bytes(BYTES)
+        hash.read_bytes(size)
       end
 
       def init(size = BYTES)
@@ -498,7 +498,7 @@ module Sodium
 
         state = State.new
         hash  = FFI::MemoryPointer.new(:uchar, size)
-        if crypto_generichash_init(state, nil, 0, hash.size) == -1
+        if crypto_generichash_init(state, nil, 0, size) == -1
           fail CryptoError
         end
 
