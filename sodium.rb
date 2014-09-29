@@ -1,6 +1,10 @@
 ﻿require 'ffi'
 
 module Sodium
+  class CryptoError < StandardError; end
+  class LengthError < ArgumentError; end
+  class MemoryError < ArgumentError; end
+
   extend FFI::Library
   ffi_lib :libsodium
 
@@ -31,35 +35,32 @@ module Sodium
 
     def malloc(size)
       unless (mem = sodium_malloc(size))
-        fail MemoryError
+        fail NoMemoryError
       end
       mem
     end
 
     def allocarray(count, size)
       unless (mem = sodium_allocarray(count, size))
-        fail MemoryError
+        fail NoMemoryError
       end
       mem
     end
 
     def noaccess(ptr)
       if sodium_mprotect_noaccess(ptr) == -1
-        free(ptr)
         fail MemoryError
       end
     end
 
     def readonly(ptr)
       if sodium_mprotect_readonly(ptr) == -1
-        free(ptr)
         fail MemoryError
       end
     end
 
     def readwrite(ptr)
       if sodium_mprotect_readwrite(ptr) == -1
-        free(ptr)
         fail MemoryError
       end
     end
@@ -77,12 +78,6 @@ module Sodium
     attach_function :close,   :randombytes_close,   [],                     :int,     blocking: true
     attach_function :stir,    :randombytes_stir,    [],                     :void,    blocking: true
   end
-end
-
-module Sodium
-  class CryptoError < StandardError; end
-  class LengthError < ArgumentError; end
-  class MemoryError < CryptoError; end
 end
 
 module Sodium
@@ -475,7 +470,7 @@ module Sodium
         out = Sodium.malloc(outlen)
         if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == -1
           Sodium.free(out)
-          fail MemoryError
+          fail NoMemoryError
         end
 
         Key.from_ptr(out, outlen)
@@ -486,7 +481,7 @@ module Sodium
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
         if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
-          fail MemoryError
+          fail NoMemoryError
         end
 
         hashed_password.read_array_of_char(STRBYTES).pack(PACK_CHAR)
