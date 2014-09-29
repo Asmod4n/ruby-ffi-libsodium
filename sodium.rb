@@ -656,7 +656,7 @@ module Sodium
           fail NoMemoryError
         end
 
-        Key.from_ptr(out, outlen)
+        [Key.from_ptr(out, outlen), salt]
       end
 
       def str(data, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
