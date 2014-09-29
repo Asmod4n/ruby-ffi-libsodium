@@ -120,11 +120,6 @@ module Sodium
         end
       end
 
-      def zeros(n)
-        zeros = "\0" * n
-        zeros.force_encoding(Encoding::ASCII_8BIT)
-      end
-
       def check_string(string)
         if string.is_a?(String)
           string
@@ -133,6 +128,29 @@ module Sodium
         else
           fail ArgumentError, "#{string.class} is not a String", caller
         end
+      end
+
+      def check_size(data)
+        if data.is_a?(FFI::Pointer)
+          data.size
+        elsif data.respond_to?(:to_ptr)
+          data.to_ptr.size
+        elsif data.is_a?(String)
+          data.bytesize
+        elsif data.respond_to?(:to_str)
+          data.to_str.bytesize
+        elsif data.respond?(:bytesize)
+          data.bytesize
+        elsif data.respond?(:size)
+          data.size
+        else
+          fail ArgumentError, "#{data.class} doesn't respond to :size or :bytesize", caller
+        end
+      end
+
+      def zeros(n)
+        zeros = "\0" * n
+        zeros.force_encoding(Encoding::ASCII_8BIT)
       end
     end
   end
@@ -568,28 +586,44 @@ module Sodium
     attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int
 
     class << self
-      def hash(data, size = BYTES)
+      def hash(data, hash_size = BYTES, key = nil)
         message = Utils.check_string(data)
-        if size > BYTES_MAX ||size < BYTES_MIN
+        if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
 
-        hash = FFI::MemoryPointer.new(:uchar, size)
-        if crypto_generichash(hash, size, message, message.bytesize, nil, 0) == -1
+        if key
+          key_len = Utils.check_size(key)
+
+          if key_len > KEYBYTES_MAX ||key_len < KEYBYTES_MIN
+            fail LengthError
+          end
+        end
+
+        hash = FFI::MemoryPointer.new(:uchar, hash_size)
+        if crypto_generichash(hash, hash_size, message, message.bytesize, key, key_len) == -1
           fail CryptoError
         end
 
-        hash.read_bytes(size)
+        hash.read_bytes(hash_size)
       end
 
-      def init(size = BYTES)
-        if size > BYTES_MAX ||size < BYTES_MIN
+      def init(key = nil, hash_size = BYTES)
+        if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
 
+        if key
+          key_len = Utils.check_size(key)
+
+          if key_len > KEYBYTES_MAX ||key_len < KEYBYTES_MIN
+            fail LengthError
+          end
+        end
+
         state = State.new
-        hash  = FFI::MemoryPointer.new(:uchar, size)
-        if crypto_generichash_init(state, nil, 0, size) == -1
+        hash  = FFI::MemoryPointer.new(:uchar, hash_size)
+        if crypto_generichash_init(state, key, key_len, hash_size) == -1
           fail CryptoError
         end
 
