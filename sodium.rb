@@ -3,7 +3,7 @@
 module Sodium
   class CryptoError < StandardError; end
   class LengthError < ArgumentError; end
-  class MemoryError < ArgumentError; end
+  class MemoryError < StandardError; end
 
   extend FFI::Library
   ffi_lib :libsodium
