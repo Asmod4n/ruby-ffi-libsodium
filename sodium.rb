@@ -352,6 +352,31 @@ module Sodium
     attach_function :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
 
     class << self
+      def nonce
+        Random.new(NONCEBYTES)
+      end
+
+      def keypair
+        public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
+        secret_key = FFI::MemoryPointer.new(:uchar, SECRETKEYBYTES)
+        if crypto_box_keypair(public_key, secret_key) == -1
+          fail CryptoError
+        end
+
+        [public_key, secret_key]
+      end
+
+      def memory_locked_keypair
+        public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
+        secret_key = Key.new(SECRETKEYBYTES)
+
+        if crypto_scalarmult_base(public_key, secret_key) == -1
+          fail CryptoError
+        end
+
+        [public_key, secret_key]
+      end
+
       def easy(data, nonce, public_key, secret_key)
         message = Utils.check_string(data)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
@@ -393,7 +418,7 @@ module Sodium
       end
 
       def open_easy(data, nonce, public_key, secret_key, utf8 = false)
-        ciphertext = Utils.check_string(ciphertext)
+        ciphertext = Utils.check_string(data)
         unless (message_len = ciphertext.bytesize - MACBYTES) > 0
           fail LengthError
         end
