@@ -256,21 +256,20 @@ module Sodium
         Random.new(NONCEBYTES)
       end
 
-      def easy(data, nonce, key)
-        message = Utils.check_string(data)
+      def easy(message, nonce, key)
+        message_len = Utils.check_size(message)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
-        ciphertext_len = MACBYTES + message.bytesize
-        ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
+        ciphertext = FFI::MemoryPointer.new(:uchar, MACBYTES + message_len)
         key.readonly if key.is_a?(Key)
-        rc = crypto_secretbox_easy(ciphertext, message, message.bytesize, nonce, key)
+        rc = crypto_secretbox_easy(ciphertext, message, message_len, nonce, key)
         key.noaccess if key.is_a?(Key)
         if rc == -1
           fail CryptoError
         end
 
-        ciphertext.read_bytes(ciphertext_len)
+        ciphertext
       end
 
       def easy_in_place(data, nonce, key)
@@ -290,28 +289,20 @@ module Sodium
         message
       end
 
-      def open_easy(data, nonce, key, utf8 = false)
-        ciphertext = Utils.check_string(data)
-        unless (message_len = ciphertext.bytesize - MACBYTES) > 0
-          fail LengthError
-        end
-
+      def open_easy(ciphertext, nonce, key)
+        ciphertext_len = Utils.check_size(ciphertext)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
-        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
+        decrypted = FFI::MemoryPointer.new(:uchar, ciphertext_len - MACBYTES)
         key.readonly if key.is_a?(Key)
-        rc = crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key)
+        rc = crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key)
         key.noaccess if key.is_a?(Key)
         if rc == -1
           fail CryptoError
         end
 
-        if utf8
-          decrypted.read_bytes(message_len).force_encoding(Encoding::UTF_8)
-        else
-          decrypted.read_bytes(message_len)
-        end
+        decrypted
       end
 
       def open_easy_in_place(data, nonce, key, utf8 = false)
@@ -355,28 +346,28 @@ module Sodium
     attach_function :crypto_auth_verify,  [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int
 
     class << self
-      def auth(data, key)
-        message = Utils.check_string(data)
+      def auth(message, key)
+        message_len = Utils.check_size(message)
         Utils.check_length(key, KEYBYTES, :Key)
 
         mac = FFI::MemoryPointer.new(:uchar, BYTES)
         key.readonly if key.is_a?(Key)
-        rc = crypto_auth(mac, message, message.bytesize, key)
+        rc = crypto_auth(mac, message, message_len, key)
         key.noaccess if key.is_a?(Key)
         if rc == -1
           fail CryptoError
         end
 
-        mac.read_bytes(BYTES)
+        mac
       end
 
-      def verify(mac, data, key)
+      def verify(mac, message, key)
         Utils.check_length(mac, BYTES, :Mac)
-        message = Utils.check_string(data)
+        message_len = Utils.check_size(message)
         Utils.check_length(key, KEYBYTES, :Key)
 
         key.readonly if key.is_a?(Key)
-        rc = crypto_auth_verify(mac, message, message.bytesize, key)
+        rc = crypto_auth_verify(mac, message, message_len, key)
         key.noaccess if key.is_a?(Key)
 
         rc == 0
@@ -435,22 +426,21 @@ module Sodium
         [public_key, Key.from_ptr(secret_key, SECRETKEYBYTES)]
       end
 
-      def easy(data, nonce, public_key, secret_key)
-        message = Utils.check_string(data)
+      def easy(message, nonce, public_key, secret_key)
+        message_len = Utils.check_size(message)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
-        ciphertext_len = MACBYTES + message.bytesize
-        ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
+        ciphertext = FFI::MemoryPointer.new(:uchar, MACBYTES + message_len)
         secret_key.readonly if secret_key.is_a?(Key)
-        rc = crypto_box_easy(ciphertext, message, message.bytesize, nonce, public_key, secret_key)
+        rc = crypto_box_easy(ciphertext, message, message_len, nonce, public_key, secret_key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
           fail CryptoError
         end
 
-        ciphertext.read_bytes(ciphertext_len)
+        ciphertext
       end
 
       def easy_in_place(data, nonce, public_key, secret_key)
@@ -458,7 +448,6 @@ module Sodium
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
-
 
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
@@ -472,29 +461,21 @@ module Sodium
         message
       end
 
-      def open_easy(data, nonce, public_key, secret_key, utf8 = false)
-        ciphertext = Utils.check_string(data)
-        unless (message_len = ciphertext.bytesize - MACBYTES) > 0
-          fail LengthError
-        end
-
+      def open_easy(ciphertext, nonce, public_key, secret_key)
+        ciphertext_len = Utils.check_size(ciphertext)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
         Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
 
-        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
+        decrypted = FFI::MemoryPointer.new(:uchar, ciphertext_len - MACBYTES)
         secret_key.readonly if secret_key.is_a?(Key)
-        rc = crypto_box_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
+        rc = crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key)
         secret_key.noaccess if secret_key.is_a?(Key)
         if rc == -1
           fail CryptoError
         end
 
-        if utf8
-          decrypted.read_bytes(message_len).force_encoding(Encoding::UTF_8)
-        else
-          decrypted.read_bytes(message_len)
-        end
+        decrypted
       end
 
       def open_easy_in_place(data, nonce, public_key, secret_key, utf8 = false)
@@ -560,8 +541,8 @@ module Sodium
     attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int, blocking: true
 
     class << self
-      def hash(data, hash_size = BYTES, key = nil)
-        message = Utils.check_string(data)
+      def hash(message, hash_size = BYTES, key = nil)
+        message_len = Utils.check_size(message)
         if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
         end
@@ -577,11 +558,11 @@ module Sodium
         end
 
         hash = FFI::MemoryPointer.new(:uchar, hash_size)
-        if crypto_generichash(hash, hash_size, message, message.bytesize, key, key_len) == -1
+        if crypto_generichash(hash, hash_size, message, message_len, key, key_len) == -1
           fail CryptoError
         end
 
-        hash.read_bytes(hash_size)
+        hash
       end
 
       def init(key = nil, hash_size = BYTES)
@@ -608,11 +589,11 @@ module Sodium
         [state, hash]
       end
 
-      def update(state, data)
+      def update(state, message)
         Utils.check_pointer(state)
-        message = Utils.check_string(data)
+        message_len = Utils.check_size(message)
 
-        if crypto_generichash_update(state, message, message.bytesize) == -1
+        if crypto_generichash_update(state, message, message_len) == -1
           fail CryptoError
         end
       end
@@ -625,7 +606,7 @@ module Sodium
           fail CryptoError
         end
 
-        hash.read_bytes(hash.size)
+        hash
       end
     end
   end
@@ -662,12 +643,12 @@ module Sodium
         Random.new(SALTBYTES)
       end
 
-      def scrypt(data, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd = Utils.check_string(data)
+      def scrypt(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+        passwd_len = Utils.check_size(passwd)
         Utils.check_length(salt, SALTBYTES, :Salt)
 
         out = Sodium.malloc(outlen)
-        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == -1
+        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit) == -1
           Sodium.free(out)
           fail NoMemoryError
         end
@@ -675,22 +656,22 @@ module Sodium
         Key.from_ptr(out, outlen)
       end
 
-      def str(data, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd = Utils.check_string(data)
+      def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+        passwd_len = Utils.check_size(passwd)
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
+        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit) == -1
           fail NoMemoryError
         end
 
-        hashed_password.read_array_of_char(STRBYTES).pack(PACK_CHAR)
+        hashed_password
       end
 
-      def str_verify(str, data)
+      def str_verify(str, passwd)
         Utils.check_length(str, STRBYTES, :Str)
-        passwd = Utils.check_string(data)
+        passwd_len = Utils.check_size(passwd)
 
-        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd.bytesize) == 0
+        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len) == 0
       end
     end
   end
