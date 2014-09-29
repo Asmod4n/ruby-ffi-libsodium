@@ -145,9 +145,8 @@ module Sodium
     def_delegators :@random, :address, :to_i, :size
 
     def initialize(size)
-      @size = size.to_int
-      @random = FFI::MemoryPointer.new(:uchar, @size)
-      Randombytes.buf(@random, @size)
+      @random = FFI::MemoryPointer.new(:uchar, size)
+      Randombytes.buf(@random, size)
     end
 
     def to_ptr
@@ -155,7 +154,7 @@ module Sodium
     end
 
     def to_str
-      @random.read_bytes(@size)
+      @random.read_bytes(size)
     end
   end
 end
@@ -323,6 +322,78 @@ module Sodium
           decrypted.read_bytes(message_len)
         end
       end
+
+      def open_easy_in_place(data, nonce, key, utf8 = false)
+        ciphertext = Utils.check_string(data)
+        unless (message_len = ciphertext.bytesize - MACBYTES) > 0
+          fail LengthError
+        end
+
+        Utils.check_length(nonce, NONCEBYTES, :Nonce)
+        Utils.check_length(key, KEYBYTES, :Key)
+
+        key.readonly if key.is_a?(Key)
+        rc = crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key)
+        key.noaccess if key.is_a?(Key)
+        if rc == -1
+          fail CryptoError
+        end
+
+        if utf8
+          ciphertext.slice!(0...message_len).force_encoding(Encoding::UTF_8)
+        else
+          ciphertext.slice!(0...message_len)
+        end
+      end
+    end
+  end
+end
+
+module Sodium
+  module Auth
+    extend FFI::Library
+    ffi_lib :libsodium
+
+    attach_function :crypto_auth_bytes,     [], :size_t
+    attach_function :crypto_auth_keybytes,  [], :size_t
+
+    BYTES     = crypto_auth_bytes
+    KEYBYTES  = crypto_auth_keybytes
+
+    attach_function :crypto_auth,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int
+    attach_function :crypto_auth_verify,  [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int
+
+    class << self
+      def key
+        Key.new(KEYBYTES)
+      end
+
+      def auth(data, key)
+        message = Utils.check_string(data)
+        Utils.check_length(key, KEYBYTES, :Key)
+
+        mac = FFI::MemoryPointer.new(:uchar, BYTES)
+        key.readonly if key.is_a?(Key)
+        rc = crypto_auth(mac, message, message.bytesize, key)
+        key.noaccess if key.is_a?(Key)
+        if rc == -1
+          fail CryptoError
+        end
+
+        mac.read_bytes(BYTES)
+      end
+
+      def verify(mac, data, key)
+        Utils.check_length(mac, BYTES, :Mac)
+        message = Utils.check_string(data)
+        Utils.check_length(key, KEYBYTES, :Key)
+
+        key.readonly if key.is_a?(Key)
+        rc = crypto_auth_verify(mac, message, message.bytesize, key)
+        key.noaccess if key.is_a?(Key)
+
+        rc == 0
+      end
     end
   end
 end
@@ -435,6 +506,30 @@ module Sodium
           decrypted.read_bytes(message_len).force_encoding(Encoding::UTF_8)
         else
           decrypted.read_bytes(message_len)
+        end
+      end
+
+      def open_easy_in_place(data, nonce, public_key, secret_key, utf8 = false)
+        ciphertext = Utils.check_string(data)
+        unless (message_len = ciphertext.bytesize - MACBYTES) > 0
+          fail LengthError
+        end
+
+        Utils.check_length(nonce, NONCEBYTES, :Nonce)
+        Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+
+        secret_key.readonly if secret_key.is_a?(Key)
+        rc = crypto_box_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
+        secret_key.noaccess if secret_key.is_a?(Key)
+        if rc == -1
+          fail CryptoError
+        end
+
+        if utf8
+          ciphertext.slice!(0...message_len).force_encoding(Encoding::UTF_8)
+        else
+          ciphertext.slice!(0...message_len)
         end
       end
     end
