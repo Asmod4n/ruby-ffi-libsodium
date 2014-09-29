@@ -154,6 +154,10 @@ module Sodium
     def to_ptr
       @nonce
     end
+
+    def to_str
+      @nonce.read_bytes(@size)
+    end
   end
 end
 
@@ -185,6 +189,13 @@ module Sodium
 
     def to_ptr
       @key
+    end
+
+    def to_str
+      readonly
+      str = @key.read_bytes(@size)
+      noaccess
+      str
     end
 
     def free
@@ -255,12 +266,15 @@ module Sodium
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
+        key.readonly if key.is_a?(Key)
+
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
-
         if easy(ciphertext, message, message.bytesize, nonce, key) == -1
           key.free if key.is_a?(Key)
           fail CryptoError
+        else
+          key.noaccess if key.is_a?(Key)
         end
 
         ciphertext.read_bytes(ciphertext_len)
@@ -275,11 +289,14 @@ module Sodium
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
         Utils.check_length(key, KEYBYTES, :Key)
 
-        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
+        key.readonly if key.is_a?(Key)
 
+        decrypted = FFI::MemoryPointer.new(:uchar, message_len)
         if open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key) == -1
           key.free if key.is_a?(Key)
           fail CryptoError
+        else
+          key.noaccess if key.is_a?(Key)
         end
 
         if utf8
@@ -354,10 +371,10 @@ module Sodium
           public_key.free if public_key.is_a?(Key)
           secret_key.free if secret_key.is_a?(Key)
           fail CryptoError
+        else
+          public_key.noaccess if public_key.is_a?(Key)
+          secret_key.noaccess if secret_key.is_a?(Key)
         end
-
-        public_key.noaccess if public_key.is_a?(Key)
-        secret_key.noaccess if secret_key.is_a?(Key)
 
         ciphertext.read_bytes(ciphertext_len)
       end
@@ -380,10 +397,10 @@ module Sodium
           public_key.free if public_key.is_a?(Key)
           secret_key.free if secret_key.is_a?(Key)
           fail CryptoError
+        else
+          public_key.noaccess if public_key.is_a?(Key)
+          secret_key.noaccess if secret_key.is_a?(Key)
         end
-
-        public_key.noaccess if public_key.is_a?(Key)
-        secret_key.noaccess if secret_key.is_a?(Key)
 
         if utf8
           str = decrypted.read_bytes(message_len)
