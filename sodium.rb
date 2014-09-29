@@ -369,8 +369,10 @@ module Sodium
       def memory_locked_keypair
         public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
         secret_key = Key.new(SECRETKEYBYTES)
-
-        if crypto_scalarmult_base(public_key, secret_key) == -1
+        secret_key.readonly
+        rc = crypto_scalarmult_base(public_key, secret_key)
+        secret_key.noaccess
+        if rc == -1
           fail CryptoError
         end
 
