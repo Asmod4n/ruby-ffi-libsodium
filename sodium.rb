@@ -274,7 +274,7 @@ module Sodium
 
         ciphertext_len = MACBYTES + message.bytesize
         ciphertext = FFI::MemoryPointer.new(:uchar, ciphertext_len)
-        if easy(ciphertext, message, message.bytesize, nonce, key) == -1
+        if crypto_secretbox_easy(ciphertext, message, message.bytesize, nonce, key) == -1
           key.free if key.is_a?(Key)
           fail CryptoError
         else
@@ -296,7 +296,7 @@ module Sodium
         key.readonly if key.is_a?(Key)
 
         decrypted = FFI::MemoryPointer.new(:uchar, message_len)
-        if open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key) == -1
+        if crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext.bytesize, nonce, key) == -1
           key.free if key.is_a?(Key)
           fail CryptoError
         else
