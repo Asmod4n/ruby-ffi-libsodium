@@ -257,8 +257,14 @@ module Sodium
         Nonce.new(NONCEBYTES)
       end
 
-      def generate_key
+      def generate_memory_locked_key
         Key.new(KEYBYTES)
+      end
+
+      def generate_key
+        key = FFI::MemoryPointer.new(:uchar, KEYBYTES)
+        Randombytes.buf(key, KEYBYTES)
+        key
       end
 
       def encrypt(data, nonce, key)
