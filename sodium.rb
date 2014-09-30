@@ -69,26 +69,6 @@ module Sodium
 end
 
 module Sodium
-  module Randombytes
-    extend FFI::Library
-    ffi_lib :libsodium
-
-    attach_function :randombytes_buf, [:buffer_out, :size_t], :void,  blocking: true
-
-    attach_function :random,  :randombytes_random,  [],         :uint32,  blocking: true
-    attach_function :uniform, :randombytes_uniform, [:uint32],  :uint32,  blocking: true
-    attach_function :close,   :randombytes_close,   [],         :int,     blocking: true
-    attach_function :stir,    :randombytes_stir,    [],         :void,    blocking: true
-
-    def self.buf(size)
-      buffer = FFI::MemoryPointer.new(:uchar, size)
-      randombytes_buf(buffer, size)
-      buffer.read_bytes(size)
-    end
-  end
-end
-
-module Sodium
   module Utils
     class << self
       def check_length(data, length, description)
@@ -121,6 +101,8 @@ module Sodium
           string
         elsif string.respond_to?(:to_str)
           string.to_str
+        elsif string.respond_to?(:read_string)
+          string.read_string
         else
           fail ArgumentError, "#{string.class} is not a String", caller
         end
@@ -141,6 +123,26 @@ module Sodium
       def zeros(n)
         ZERO * n
       end
+    end
+  end
+end
+
+module Sodium
+  module Randombytes
+    extend FFI::Library
+    ffi_lib :libsodium
+
+    attach_function :randombytes_buf, [:buffer_out, :size_t], :void,  blocking: true
+
+    attach_function :random,  :randombytes_random,  [],         :uint32,  blocking: true
+    attach_function :uniform, :randombytes_uniform, [:uint32],  :uint32,  blocking: true
+    attach_function :close,   :randombytes_close,   [],         :int,     blocking: true
+    attach_function :stir,    :randombytes_stir,    [],         :void,    blocking: true
+
+    def self.buf(size)
+      buffer = FFI::MemoryPointer.new(:uchar, size)
+      randombytes_buf(buffer, size)
+      buffer.read_bytes(size)
     end
   end
 end
