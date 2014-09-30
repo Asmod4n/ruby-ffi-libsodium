@@ -43,7 +43,7 @@ module Sodium
 
     def allocarray(count, size)
       unless (mem = sodium_allocarray(count, size))
-        fail NoMemoryError, "Failed to allocate memory size=#{size} bytes"
+        fail NoMemoryError, "Failed to allocate memory size=#{count * size} bytes"
       end
       mem
     end
@@ -75,10 +75,10 @@ module Sodium
 
     attach_function :randombytes_buf, [:buffer_out, :size_t], :void,  blocking: true
 
-    attach_function :random,  :randombytes_random,  [],                     :uint32,  blocking: true
-    attach_function :uniform, :randombytes_uniform, [:uint32],              :uint32,  blocking: true
-    attach_function :close,   :randombytes_close,   [],                     :int,     blocking: true
-    attach_function :stir,    :randombytes_stir,    [],                     :void,    blocking: true
+    attach_function :random,  :randombytes_random,  [],         :uint32,  blocking: true
+    attach_function :uniform, :randombytes_uniform, [:uint32],  :uint32,  blocking: true
+    attach_function :close,   :randombytes_close,   [],         :int,     blocking: true
+    attach_function :stir,    :randombytes_stir,    [],         :void,    blocking: true
 
     def self.buf(size)
       buffer = FFI::MemoryPointer.new(:uchar, size)
@@ -166,7 +166,7 @@ module Sodium
     def initialize(size)
       @size = size.to_int
       @key = Sodium.malloc(size)
-      Randombytes.buf(@key, size)
+      Randombytes.randombytes_buf(@key, size)
       noaccess
       setup_finalizer
     end
@@ -406,6 +406,20 @@ module Sodium
         [public_key, SecretKey.from_ptr(secret_key, SECRETKEYBYTES)]
       end
 
+      def public_key_from(secret_key)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+
+        public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
+        secret_key.readonly if secret_key.is_a?(SecretKey)
+        rc = crypto_scalarmult_base(public_key, secret_key)
+        secret_key.noaccess if secret_key.is_a?(SecretKey)
+        if rc == -1
+          fail CryptoError
+        end
+
+        public_key
+      end
+
       def easy(message, nonce, public_key, secret_key)
         message_len = Utils.get_size(message)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
@@ -521,7 +535,7 @@ module Sodium
     attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int, blocking: true
 
     class << self
-      def hash(message, hash_size = BYTES, key = nil)
+      def generichash(message, hash_size = BYTES, key = nil)
         message_len = Utils.get_size(message)
         if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
           fail LengthError
@@ -537,19 +551,15 @@ module Sodium
           key_len = 0
         end
 
-        hash = FFI::MemoryPointer.new(:uchar, hash_size)
-        if crypto_generichash(hash, hash_size, message, message_len, key, key_len) == -1
+        generichash = FFI::MemoryPointer.new(:uchar, hash_size)
+        if crypto_generichash(generichash, hash_size, message, message_len, key, key_len) == -1
           fail CryptoError
         end
 
-        hash
+        generichash
       end
 
       def init(key = nil, hash_size = BYTES)
-        if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
-          fail LengthError
-        end
-
         if key
           key_len = Utils.get_size(key)
 
@@ -558,6 +568,10 @@ module Sodium
           end
         else
           key_len = 0
+        end
+
+        if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
+          fail LengthError
         end
 
         state = State.new
@@ -590,69 +604,78 @@ module Sodium
       end
     end
   end
+
+  def self.generichash(*args)
+    Generichash.generichash(*args)
+  end
 end
 
 module Sodium
-  module Pwhash_ScryptSalsa208sha256
-    PACK_CHAR = 'c*'.freeze
-    extend FFI::Library
-    ffi_lib :libsodium
+  module Pwhash
+    module ScryptSalsa208SHA256
+      extend FFI::Library
+      ffi_lib :libsodium
 
-    attach_function :crypto_pwhash_scryptsalsa208sha256_saltbytes,            [], :size_t
-    attach_function :crypto_pwhash_scryptsalsa208sha256_strbytes,             [], :size_t
-    attach_function :crypto_pwhash_scryptsalsa208sha256_strprefix,            [], :string
-    attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_interactive, [], :size_t
-    attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_interactive, [], :size_t
-    attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive,   [], :size_t
-    attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive,   [], :size_t
+      attach_function :crypto_pwhash_scryptsalsa208sha256_saltbytes,            [], :size_t
+      attach_function :crypto_pwhash_scryptsalsa208sha256_strbytes,             [], :size_t
+      attach_function :crypto_pwhash_scryptsalsa208sha256_strprefix,            [], :string
+      attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_interactive, [], :size_t
+      attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_interactive, [], :size_t
+      attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive,   [], :size_t
+      attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive,   [], :size_t
 
-    SALTBYTES             = crypto_pwhash_scryptsalsa208sha256_saltbytes
-    STRBYTES              = crypto_pwhash_scryptsalsa208sha256_strbytes
-    STRPREFIX             = crypto_pwhash_scryptsalsa208sha256_strprefix
-    OPSLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_opslimit_interactive
-    MEMLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_memlimit_interactive
-    OPSLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive
-    MEMLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive
+      SALTBYTES             = crypto_pwhash_scryptsalsa208sha256_saltbytes
+      STRBYTES              = crypto_pwhash_scryptsalsa208sha256_strbytes
+      STRPREFIX             = crypto_pwhash_scryptsalsa208sha256_strprefix
+      OPSLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_opslimit_interactive
+      MEMLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_memlimit_interactive
+      OPSLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive
+      MEMLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive
 
-    attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
-    attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
-    attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
+      attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
+      attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
+      attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
 
-    class << self
-      def salt
-        Randombytes.buf(SALTBYTES)
-      end
-
-      def scrypt(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd_len = Utils.get_size(passwd)
-        Utils.check_length(salt, SALTBYTES, :Salt)
-
-        out = Sodium.malloc(outlen)
-        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit) == -1
-          Sodium.free(out)
-          fail NoMemoryError
+      class << self
+        def salt
+          Randombytes.buf(SALTBYTES)
         end
 
-        SecretKey.from_ptr(out, outlen)
-      end
+        def scryptsalsa208sha256(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+          passwd_len = Utils.get_size(passwd)
+          Utils.check_length(salt, SALTBYTES, :Salt)
 
-      def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd_len = Utils.get_size(passwd)
+          out = Sodium.malloc(outlen)
+          if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit) == -1
+            Sodium.free(out)
+            fail NoMemoryError
+          end
 
-        hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit) == -1
-          fail NoMemoryError
+          SecretKey.from_ptr(out, outlen)
         end
 
-        hashed_password
-      end
+        def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+          passwd_len = Utils.get_size(passwd)
 
-      def str_verify(str, passwd)
-        Utils.check_length(str, STRBYTES, :Str)
-        passwd_len = Utils.get_size(passwd)
+          hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
+          if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit) == -1
+            fail NoMemoryError
+          end
 
-        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len) == 0
+          hashed_password
+        end
+
+        def str_verify(str, passwd)
+          Utils.check_length(str, STRBYTES, :Str)
+          passwd_len = Utils.get_size(passwd)
+
+          crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len) == 0
+        end
       end
+    end
+
+    def self.scryptsalsa208sha256(*args)
+      ScryptSalsa208SHA256.scryptsalsa208sha256(*args)
     end
   end
 end
