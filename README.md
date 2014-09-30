@@ -1,7 +1,7 @@
 ruby-ffi-sodium
 ===============
 
-"Two Factor Authentication": All you need to store to verify a account is the salt, which can be public. Even when compromised, passwords should be safe. See: http://doc.libsodium.org/secret-key_cryptography/secret-key_authentication.html
+Secret Key derivation and user authentication: Store the salt and the mac and you can verify a user and give him a Secret Key without storing the password or key in a database.
 
 ```ruby
 require './sodium'
