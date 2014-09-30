@@ -346,7 +346,7 @@ module Sodium
           fail CryptoError
         end
 
-        mac.read_bytes(mac.size)
+        mac.read_bytes(BYTES)
       end
 
       def verify(mac, message, key)
@@ -574,7 +574,7 @@ module Sodium
           fail CryptoError
         end
 
-        blake2b.read_bytes(blake2b.size)
+        blake2b.read_bytes(hash_size)
       end
 
       def init(key = nil, hash_size = BYTES)
