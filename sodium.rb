@@ -407,7 +407,7 @@ module Sodium
       end
 
       def public_key_from(secret_key)
-        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
         public_key = FFI::MemoryPointer.new(:uchar, PUBLICKEYBYTES)
         secret_key.readonly if secret_key.is_a?(SecretKey)
@@ -423,8 +423,8 @@ module Sodium
       def easy(message, nonce, public_key, secret_key)
         message_len = Utils.get_size(message)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
-        Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
-        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+        Utils.check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
         ciphertext = FFI::MemoryPointer.new(:uchar, MACBYTES + message_len)
         secret_key.readonly if secret_key.is_a?(SecretKey)
@@ -440,8 +440,8 @@ module Sodium
       def easy_in_place(data, nonce, public_key, secret_key)
         message = Utils.get_string(data)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
-        Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
-        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+        Utils.check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
         message_len = message.bytesize
         message << Utils.zeros(MACBYTES)
@@ -458,8 +458,8 @@ module Sodium
       def open_easy(ciphertext, nonce, public_key, secret_key)
         ciphertext_len = Utils.get_size(ciphertext)
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
-        Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
-        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+        Utils.check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
         decrypted = FFI::MemoryPointer.new(:uchar, ciphertext_len - MACBYTES)
         secret_key.readonly if secret_key.is_a?(SecretKey)
@@ -479,8 +479,8 @@ module Sodium
         end
 
         Utils.check_length(nonce, NONCEBYTES, :Nonce)
-        Utils.check_length(public_key, PUBLICKEYBYTES, :Public_Key)
-        Utils.check_length(secret_key, SECRETKEYBYTES, :Secret_Key)
+        Utils.check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+        Utils.check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
         secret_key.readonly if secret_key.is_a?(SecretKey)
         rc = crypto_box_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
@@ -551,12 +551,12 @@ module Sodium
           key_len = 0
         end
 
-        generichash = FFI::MemoryPointer.new(:uchar, hash_size)
-        if crypto_generichash(generichash, hash_size, message, message_len, key, key_len) == -1
+        blake2b = FFI::MemoryPointer.new(:uchar, hash_size)
+        if crypto_generichash(blake2b, hash_size, message, message_len, key, key_len) == -1
           fail CryptoError
         end
 
-        generichash
+        blake2b
       end
 
       def init(key = nil, hash_size = BYTES)
@@ -575,12 +575,12 @@ module Sodium
         end
 
         state = State.new
-        hash  = FFI::MemoryPointer.new(:uchar, hash_size)
+        blake2b = FFI::MemoryPointer.new(:uchar, hash_size)
         if crypto_generichash_init(state, key, key_len, hash_size) == -1
           fail CryptoError
         end
 
-        [state, hash]
+        [state, blake2b]
       end
 
       def update(state, message)
@@ -592,15 +592,15 @@ module Sodium
         end
       end
 
-      def final(state, hash)
+      def final(state, blake2b)
         Utils.get_pointer(state)
-        Utils.get_pointer(hash)
+        Utils.get_pointer(generichash)
 
-        if crypto_generichash_final(state, hash, hash.size) == -1
+        if crypto_generichash_final(state, blake2b, blake2b.size) == -1
           fail CryptoError
         end
 
-        hash
+        blake2b
       end
     end
   end
