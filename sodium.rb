@@ -83,7 +83,7 @@ module Sodium
     def self.buf(size)
       buffer = FFI::MemoryPointer.new(:uchar, size)
       randombytes_buf(buffer, size)
-      buffer
+      buffer.read_bytes(size)
     end
   end
 end
@@ -136,10 +136,10 @@ module Sodium
         end
       end
 
-      ZERO = "\0".freeze
+      ZERO = ("\0".force_encoding(Encoding::ASCII_8BIT)).freeze
 
       def zeros(n)
-        (ZERO * n).force_encoding(Encoding::ASCII_8BIT)
+        ZERO * n
       end
     end
   end
@@ -249,7 +249,7 @@ module Sodium
           fail CryptoError
         end
 
-        ciphertext
+        ciphertext.read_bytes(ciphertext.size)
       end
 
       def easy_in_place(data, nonce, key)
@@ -282,7 +282,7 @@ module Sodium
           fail CryptoError
         end
 
-        decrypted
+        decrypted.read_bytes(decrypted.size)
       end
 
       def open_easy_in_place(data, nonce, key, utf8 = false)
@@ -340,7 +340,7 @@ module Sodium
           fail CryptoError
         end
 
-        mac
+        mac.read_bytes(mac.size)
       end
 
       def verify(mac, message, key)
@@ -440,7 +440,7 @@ module Sodium
           fail CryptoError
         end
 
-        ciphertext
+        ciphertext.read_bytes(ciphertext.size)
       end
 
       def easy_in_place(data, nonce, public_key, secret_key)
@@ -475,7 +475,7 @@ module Sodium
           fail CryptoError
         end
 
-        decrypted
+        decrypted.read_bytes(decrypted.size)
       end
 
       def open_easy_in_place(data, nonce, public_key, secret_key, utf8 = false)
@@ -564,7 +564,7 @@ module Sodium
           fail CryptoError
         end
 
-        blake2b
+        blake2b.read_bytes(blake2b.size)
       end
 
       def init(key = nil, hash_size = BYTES)
@@ -608,7 +608,7 @@ module Sodium
           fail CryptoError
         end
 
-        blake2b
+        blake2b.read_bytes(blake2b.size)
       end
     end
   end
@@ -621,6 +621,7 @@ end
 module Sodium
   module Pwhash
     module ScryptSalsa208SHA256
+      PACK_C = 'c*'.freeze
       extend FFI::Library
       ffi_lib :libsodium
 
@@ -670,7 +671,7 @@ module Sodium
             fail NoMemoryError
           end
 
-          hashed_password
+          hashed_password.read_array_of_char(STRBYTES).pack(PACK_C)
         end
 
         def str_verify(str, passwd)
