@@ -43,7 +43,7 @@ module Sodium
 
     def allocarray(count, size)
       unless (mem = sodium_allocarray(count, size))
-        fail NoMemoryError, "Failed to allocate memory size=#{size} bytes"
+        fail NoMemoryError, "Failed to allocate memory size=#{count * size} bytes"
       end
       mem
     end
