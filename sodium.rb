@@ -43,7 +43,7 @@ module Sodium
 
     def allocarray(count, size)
       unless (mem = sodium_allocarray(count, size))
-        fail NoMemoryError, "Failed to allocate memory size=#{count * size} bytes"
+        fail NoMemoryError, "Failed to allocate memory size=#{size} bytes"
       end
       mem
     end
@@ -75,7 +75,7 @@ module Sodium
 
     attach_function :random,  :randombytes_random,  [],                     :uint32,  blocking: true
     attach_function :uniform, :randombytes_uniform, [:uint32],              :uint32,  blocking: true
-    attach_function :buf,     :randombytes_buf,     [:buffer_out, :size_t],  :void,    blocking: true
+    attach_function :buf,     :randombytes_buf,     [:buffer_out, :size_t], :void,    blocking: true
     attach_function :close,   :randombytes_close,   [],                     :int,     blocking: true
     attach_function :stir,    :randombytes_stir,    [],                     :void,    blocking: true
   end
@@ -525,7 +525,7 @@ module Sodium
       layout  :h,         [:uint64, 8],
               :t,         [:uint64, 2],
               :f,         [:uint64, 2],
-              :buf,       [:uint64, 2 * 128],
+              :buf,       [:uint8, 2 * 128],
               :buflen,    :size_t,
               :last_node, :uint8
     end
