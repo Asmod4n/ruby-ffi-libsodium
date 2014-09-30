@@ -73,11 +73,18 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
+    attach_function :randombytes_buf, [:buffer_out, :size_t], :void,  blocking: true
+
     attach_function :random,  :randombytes_random,  [],                     :uint32,  blocking: true
     attach_function :uniform, :randombytes_uniform, [:uint32],              :uint32,  blocking: true
-    attach_function :buf,     :randombytes_buf,     [:buffer_out, :size_t], :void,    blocking: true
     attach_function :close,   :randombytes_close,   [],                     :int,     blocking: true
     attach_function :stir,    :randombytes_stir,    [],                     :void,    blocking: true
+
+    def self.buf(size)
+      buffer = FFI::MemoryPointer.new(:uchar, size)
+      randombytes_buf(buffer, size)
+      buffer
+    end
   end
 end
 
@@ -134,27 +141,6 @@ module Sodium
       def zeros(n)
         (ZERO * n).force_encoding(Encoding::ASCII_8BIT)
       end
-    end
-  end
-end
-
-module Sodium
-  class Random
-    extend Forwardable
-
-    def_delegators :@random, :address, :to_i, :size
-
-    def initialize(size)
-      @random = FFI::MemoryPointer.new(:uchar, size)
-      Randombytes.buf(@random, size)
-    end
-
-    def to_ptr
-      @random
-    end
-
-    def to_str
-      @random.read_bytes(size)
     end
   end
 end
@@ -247,7 +233,7 @@ module Sodium
 
     class << self
       def nonce
-        Random.new(NONCEBYTES)
+        Randombytes.buf(NONCEBYTES)
       end
 
       def easy(message, nonce, key)
@@ -396,7 +382,7 @@ module Sodium
 
     class << self
       def nonce
-        Random.new(NONCEBYTES)
+        Randombytes.buf(NONCEBYTES)
       end
 
       def keypair
@@ -634,7 +620,7 @@ module Sodium
 
     class << self
       def salt
-        Random.new(SALTBYTES)
+        Randombytes.buf(SALTBYTES)
       end
 
       def scrypt(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
