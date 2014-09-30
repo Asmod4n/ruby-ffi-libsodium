@@ -496,10 +496,12 @@ module Sodium
         end
 
         if utf8
-          ciphertext.slice!(0...message_len).force_encoding(Encoding::UTF_8)
+          ciphertext.slice!(message_len..-1).force_encoding(Encoding::UTF_8)
         else
-          ciphertext.slice!(0...message_len)
+          ciphertext.slice!(message_len..-1)
         end
+
+        ciphertext
       end
     end
   end
