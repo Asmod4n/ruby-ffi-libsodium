@@ -132,7 +132,7 @@ module Sodium
         elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
           data.size
         else
-          fail ArgumentError, "#{data.class} doesn't respond to :size or :bytesize", caller
+          fail ArgumentError, "#{data.class} doesn't respond to :bytesize or :size", caller
         end
       end
 
@@ -322,8 +322,8 @@ module Sodium
     BYTES     = crypto_auth_bytes
     KEYBYTES  = crypto_auth_keybytes
 
-    attach_function :crypto_auth,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int
-    attach_function :crypto_auth_verify,  [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int
+    attach_function :crypto_auth,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int, blocking: true
+    attach_function :crypto_auth_verify,  [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
 
     class << self
       def auth(message, key)
@@ -353,6 +353,10 @@ module Sodium
         rc == 0
       end
     end
+  end
+
+  def self.auth(*args)
+    Auth.auth(*args)
   end
 end
 
@@ -594,7 +598,7 @@ module Sodium
 
       def final(state, blake2b)
         Utils.get_pointer(state)
-        Utils.get_pointer(generichash)
+        Utils.get_pointer(blake2b)
 
         if crypto_generichash_final(state, blake2b, blake2b.size) == -1
           fail CryptoError
