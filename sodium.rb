@@ -222,6 +222,8 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
+    attach_function :primitive, :crypto_secretbox_primitive,  [], :string
+
     attach_function :crypto_secretbox_keybytes,   [], :size_t
     attach_function :crypto_secretbox_noncebytes, [], :size_t
     attach_function :crypto_secretbox_macbytes,   [], :size_t
@@ -320,6 +322,8 @@ module Sodium
     extend FFI::Library
     ffi_lib :libsodium
 
+    attach_function :primitive, :crypto_auth_primitive, [], :string
+
     attach_function :crypto_auth_bytes,     [], :size_t
     attach_function :crypto_auth_keybytes,  [], :size_t
 
@@ -368,6 +372,8 @@ module Sodium
   module Box
     extend FFI::Library
     ffi_lib :libsodium
+
+    attach_function :primitive, :crypto_box_primitive,  [], :string
 
     attach_function :crypto_box_seedbytes,      [], :size_t
     attach_function :crypto_box_publickeybytes, [], :size_t
@@ -513,6 +519,8 @@ module Sodium
   module Generichash
     extend FFI::Library
     ffi_lib :libsodium
+
+    attach_function :primitive, :crypto_generichash_primitive,  [], :string
 
     attach_function :crypto_generichash_bytes_min,      [], :size_t
     attach_function :crypto_generichash_bytes_max,      [], :size_t
