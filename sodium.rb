@@ -130,7 +130,7 @@ module Sodium
       end
     end
 
-    ZERO = ("\0".force_encoding(Encoding::ASCII_8BIT)).freeze
+    ZERO = "\0".force_encoding(Encoding::ASCII_8BIT).freeze
 
     def zeros(n)
       ZERO * n
@@ -236,9 +236,9 @@ module Crypto
     attach_function :crypto_secretbox_noncebytes, [], :size_t
     attach_function :crypto_secretbox_macbytes,   [], :size_t
 
-    KEYBYTES    = crypto_secretbox_keybytes
-    NONCEBYTES  = crypto_secretbox_noncebytes
-    MACBYTES    = crypto_secretbox_macbytes
+    KEYBYTES    = crypto_secretbox_keybytes.freeze
+    NONCEBYTES  = crypto_secretbox_noncebytes.freeze
+    MACBYTES    = crypto_secretbox_macbytes.freeze
 
     attach_function :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
     attach_function :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
@@ -295,7 +295,7 @@ module Crypto
     def open_easy_in_place(data, nonce, key, utf8 = false)
       ciphertext = get_string(data)
       unless (message_len = ciphertext.bytesize - MACBYTES) > 0
-        fail LengthError
+        fail LengthError, "Ciphertext is too short", caller
       end
 
       check_length(nonce, NONCEBYTES, :Nonce)
@@ -331,8 +331,8 @@ module Crypto
     attach_function :crypto_auth_bytes,     [], :size_t
     attach_function :crypto_auth_keybytes,  [], :size_t
 
-    BYTES     = crypto_auth_bytes
-    KEYBYTES  = crypto_auth_keybytes
+    BYTES     = crypto_auth_bytes.freeze
+    KEYBYTES  = crypto_auth_keybytes.freeze
 
     attach_function :crypto_auth,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int, blocking: true
     attach_function :crypto_auth_verify,  [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
@@ -384,15 +384,14 @@ module Crypto
     attach_function :crypto_box_noncebytes,     [], :size_t
     attach_function :crypto_box_macbytes,       [], :size_t
 
-    SEEDBYTES       = crypto_box_seedbytes
-    PUBLICKEYBYTES  = crypto_box_publickeybytes
-    SECRETKEYBYTES  = crypto_box_secretkeybytes
-    NONCEBYTES      = crypto_box_noncebytes
-    MACBYTES        = crypto_box_macbytes
+    SEEDBYTES       = crypto_box_seedbytes.freeze
+    PUBLICKEYBYTES  = crypto_box_publickeybytes.freeze
+    SECRETKEYBYTES  = crypto_box_secretkeybytes.freeze
+    NONCEBYTES      = crypto_box_noncebytes.freeze
+    MACBYTES        = crypto_box_macbytes.freeze
 
     attach_function :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int, blocking: true
     attach_function :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
-    attach_function :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int, blocking: true
 
     attach_function :crypto_box_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
     attach_function :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
@@ -418,17 +417,6 @@ module Crypto
       secret_key.noaccess
 
       [public_key, secret_key]
-    end
-
-    def public_key_from(secret_key)
-      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
-
-      public_key = Sodium::Pointer.new(:uchar, PUBLICKEYBYTES)
-      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      crypto_scalarmult_base(public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
-
-      public_key
     end
 
     def easy(message, nonce, public_key, secret_key)
@@ -480,7 +468,7 @@ module Crypto
     def open_easy_in_place(data, nonce, public_key, secret_key, utf8 = false)
       ciphertext = get_string(data)
       unless (message_len = ciphertext.bytesize - MACBYTES) > 0
-        fail LengthError
+        fail LengthError, "Ciphertext is too short", caller
       end
 
       check_length(nonce, NONCEBYTES, :Nonce)
@@ -521,12 +509,12 @@ module Crypto
     attach_function :crypto_generichash_keybytes_max,   [], :size_t
     attach_function :crypto_generichash_keybytes,       [], :size_t
 
-    BYTES_MIN     = crypto_generichash_bytes_min
-    BYTES_MAX     = crypto_generichash_bytes_max
-    BYTES         = crypto_generichash_bytes
-    KEYBYTES_MIN  = crypto_generichash_keybytes_min
-    KEYBYTES_MAX  = crypto_generichash_keybytes_max
-    KEYBYTES      = crypto_generichash_keybytes
+    BYTES_MIN     = crypto_generichash_bytes_min.freeze
+    BYTES_MAX     = crypto_generichash_bytes_max.freeze
+    BYTES         = crypto_generichash_bytes.freeze
+    KEYBYTES_MIN  = crypto_generichash_keybytes_min.freeze
+    KEYBYTES_MAX  = crypto_generichash_keybytes_max.freeze
+    KEYBYTES      = crypto_generichash_keybytes.freeze
 
     attach_function :crypto_generichash,  [:buffer_out, :size_t, :buffer_in, :ulong_long, :buffer_in, :size_t], :int, blocking: true
 
@@ -637,13 +625,13 @@ module Crypto
       attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive,   [], :size_t
       attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive,   [], :size_t
 
-      SALTBYTES             = crypto_pwhash_scryptsalsa208sha256_saltbytes
-      STRBYTES              = crypto_pwhash_scryptsalsa208sha256_strbytes
-      STRPREFIX             = crypto_pwhash_scryptsalsa208sha256_strprefix
-      OPSLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_opslimit_interactive
-      MEMLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_memlimit_interactive
-      OPSLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive
-      MEMLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive
+      SALTBYTES             = crypto_pwhash_scryptsalsa208sha256_saltbytes.freeze
+      STRBYTES              = crypto_pwhash_scryptsalsa208sha256_strbytes.freeze
+      STRPREFIX             = crypto_pwhash_scryptsalsa208sha256_strprefix.freeze
+      OPSLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_opslimit_interactive.freeze
+      MEMLIMIT_INTERACTIVE  = crypto_pwhash_scryptsalsa208sha256_memlimit_interactive.freeze
+      OPSLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive.freeze
+      MEMLIMIT_SENSITIVE    = crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive.freeze
 
       attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
       attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
@@ -672,7 +660,7 @@ module Crypto
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd_len = get_size(passwd)
 
-        hashed_password = Sodium::Pointer.new(:char, STRBYTES)
+        hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
         if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit) == -1
           fail NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
         end
