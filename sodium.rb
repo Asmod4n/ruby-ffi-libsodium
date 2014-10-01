@@ -167,8 +167,8 @@ module Sodium
 
     def initialize(size)
       @size = size.to_int
-      @key = Sodium.malloc(size)
-      Randombytes.randombytes_buf(@key, size)
+      @key = Sodium.malloc(@size)
+      Randombytes.randombytes_buf(@key, @size)
       noaccess
       setup_finalizer
     end
@@ -178,11 +178,10 @@ module Sodium
     end
 
     def free
-      @size = nil
       remove_finalizer
       readwrite
       Sodium.free(@key)
-      @key = nil
+      @size, @key = nil, nil
     end
 
     def noaccess
