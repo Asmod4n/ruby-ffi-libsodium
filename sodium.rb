@@ -110,6 +110,16 @@ module Sodium
       end
     end
 
+    def get_int(int)
+      if int.is_a?(Integer)
+        int
+      elsif int.respond_to?(:to_int)
+        int.to_int
+      else
+        fail ArgumentError, "#{int.class} is not a Integer", caller
+      end
+    end
+
     def get_size(data)
       if data.is_a?(String) ||data.respond_to?(:bytesize)
         data.bytesize
@@ -147,7 +157,7 @@ module Sodium
     attr_reader :size
 
     def initialize(size)
-      @size = size.to_int
+      @size = size
       @key = Sodium.malloc(@size)
       setup_finalizer
     end
@@ -240,7 +250,7 @@ module Crypto
     end
 
     def easy(message, nonce, key)
-      message_len = Sodium::Utils.get_size(message)
+      message_len = get_size(message)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
@@ -330,7 +340,7 @@ module Crypto
     module_function
 
     def auth(message, key)
-      message_len = Sodium::Utils.get_size(message)
+      message_len = get_size(message)
       check_length(key, KEYBYTES, :SecretKey)
 
       mac = Sodium::Pointer.new(:uchar, BYTES)
@@ -646,7 +656,7 @@ module Crypto
       end
 
       def scryptsalsa208sha256(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd_len = Sodium::Utils.get_size(passwd)
+        passwd_len = get_size(passwd)
         check_length(salt, SALTBYTES, :Salt)
 
         out = Sodium::SecretBuffer.new(outlen)
