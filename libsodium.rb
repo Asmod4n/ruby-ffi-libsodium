@@ -1,6 +1,6 @@
 ﻿require 'ffi'
 
-module LibSodium
+module Sodium
   class CryptoError < StandardError; end
   class LengthError < ArgumentError; end
   class MemoryError < StandardError; end
@@ -68,7 +68,7 @@ module LibSodium
   end
 end
 
-module LibSodium
+module Sodium
   module Utils
 
     module_function
@@ -138,7 +138,7 @@ module LibSodium
   end
 end
 
-module LibSodium
+module Sodium
   class Buffer < FFI::MemoryPointer
     def to_bytes
       read_bytes(size)
@@ -148,7 +148,7 @@ module LibSodium
   end
 end
 
-module LibSodium
+module Sodium
   class SecretBuffer
     extend Forwardable
 
@@ -158,7 +158,7 @@ module LibSodium
 
     def initialize(size)
       @size = Utils.get_int(size)
-      @key = LibSodium.malloc(@size)
+      @key = Sodium.malloc(@size)
       setup_finalizer
     end
 
@@ -169,20 +169,20 @@ module LibSodium
     def free
       remove_finalizer
       readwrite
-      LibSodium.free(@key)
+      Sodium.free(@key)
       @size = @key = nil
     end
 
     def noaccess
-      LibSodium.noaccess(@key)
+      Sodium.noaccess(@key)
     end
 
     def readonly
-      LibSodium.readonly(@key)
+      Sodium.readonly(@key)
     end
 
     def readwrite
-      LibSodium.readwrite(@key)
+      Sodium.readwrite(@key)
     end
 
     private
@@ -197,8 +197,8 @@ module LibSodium
 
     def self.free(address)
       ->(obj_id) do
-        LibSodium.readwrite(FFI::Pointer.new(address))
-        LibSodium.free(FFI::Pointer.new(address))
+        Sodium.readwrite(FFI::Pointer.new(address))
+        Sodium.free(FFI::Pointer.new(address))
         true
       end
     end
@@ -217,7 +217,7 @@ module RandomBytes
   attach_function :stir,    :randombytes_stir,    [],         :void,    blocking: true
 
   def self.buf(size)
-    buf = LibSodium::Buffer.new(:uchar, size)
+    buf = Sodium::Buffer.new(:uchar, size)
     randombytes_buf(buf, size)
     buf
   end
@@ -226,7 +226,7 @@ end
 module Crypto
   module SecretBox
     extend FFI::Library
-    extend LibSodium::Utils
+    extend Sodium::Utils
 
     ffi_lib :libsodium
 
@@ -254,10 +254,10 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      ciphertext = LibSodium::Buffer.new(:uchar, MACBYTES + message_len)
-      key.readonly if key.is_a?(LibSodium::SecretBuffer)
+      ciphertext = Sodium::Buffer.new(:uchar, MACBYTES + message_len)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(ciphertext, message, message_len, nonce, key)
-      key.noaccess if key.is_a?(LibSodium::SecretBuffer)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       ciphertext
     end
@@ -267,10 +267,10 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      decrypted = LibSodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
-      key.readonly if key.is_a?(LibSodium::SecretBuffer)
+      decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
       rc = crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key)
-      key.noaccess if key.is_a?(LibSodium::SecretBuffer)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
       if rc == -1
         fail CryptoError, "Ciphertext got tampered with", caller
       end
@@ -285,9 +285,9 @@ module Crypto
 
       message_len = message.bytesize
       message << zeros(MACBYTES)
-      key.readonly if key.is_a?(LibSodium::SecretBuffer)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(message, message, message_len, nonce, key)
-      key.noaccess if key.is_a?(LibSodium::SecretBuffer)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       message
     end
@@ -301,9 +301,9 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      key.readonly if key.is_a?(LibSodium::SecretBuffer)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
       rc = crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key)
-      key.noaccess if key.is_a?(LibSodium::SecretBuffer)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
       if rc == -1
         fail CryptoError, "Ciphertext got tampered with", caller
       end
@@ -322,7 +322,7 @@ end
 module Crypto
   module Auth
     extend FFI::Library
-    extend LibSodium::Utils
+    extend Sodium::Utils
 
     ffi_lib :libsodium
 
@@ -343,10 +343,10 @@ module Crypto
       message_len = get_size(message)
       check_length(key, KEYBYTES, :SecretKey)
 
-      mac = LibSodium::Buffer.new(:uchar, BYTES)
-      key.readonly if key.is_a?(LibSodium::SecretBuffer)
+      mac = Sodium::Buffer.new(:uchar, BYTES)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_auth(mac, message, message_len, key)
-      key.noaccess if key.is_a?(LibSodium::SecretBuffer)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       mac
     end
@@ -356,9 +356,9 @@ module Crypto
       message_len = get_size(message)
       check_length(key, KEYBYTES, :SecretKey)
 
-      key.readonly if key.is_a?(LibSodium::SecretBuffer)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
       rc = crypto_auth_verify(mac, message, message_len, key)
-      key.noaccess if key.is_a?(LibSodium::SecretBuffer)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       rc == 0
     end
@@ -372,7 +372,7 @@ end
 module Crypto
   module Box
     extend FFI::Library
-    extend LibSodium::Utils
+    extend Sodium::Utils
 
     ffi_lib :libsodium
 
@@ -403,8 +403,8 @@ module Crypto
     end
 
     def keypair
-      public_key = LibSodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = LibSodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
       crypto_box_keypair(public_key, secret_key)
 
       [public_key, secret_key]
@@ -413,16 +413,16 @@ module Crypto
     def seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
-      public_key = LibSodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = LibSodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
       crypto_box_seed_keypair(public_key, secret_key, seed)
 
       [public_key, secret_key]
     end
 
     def memory_locked_keypair
-      public_key = LibSodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = LibSodium::SecretBuffer.new(SECRETKEYBYTES)
+      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       crypto_box_keypair(public_key, secret_key)
       secret_key.noaccess
 
@@ -432,8 +432,8 @@ module Crypto
     def memory_locked_seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
-      public_key = LibSodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = LibSodium::SecretBuffer.new(:uchar, SECRETKEYBYTES)
+      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      secret_key = Sodium::SecretBuffer.new(:uchar, SECRETKEYBYTES)
       crypto_box_seed_keypair(public_key, secret_key, seed)
       secret_key.noaccess
 
@@ -446,10 +446,10 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      ciphertext = LibSodium::Buffer.new(:uchar, MACBYTES + message_len)
-      secret_key.readonly if secret_key.is_a?(LibSodium::SecretBuffer)
+      ciphertext = Sodium::Buffer.new(:uchar, MACBYTES + message_len)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(ciphertext, message, message_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(LibSodium::SecretBuffer)
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
       ciphertext
     end
@@ -460,10 +460,10 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      decrypted = LibSodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
-      secret_key.readonly if secret_key.is_a?(LibSodium::SecretBuffer)
+      decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       rc = crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(LibSodium::SecretBuffer)
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
       if rc == -1
         fail CryptoError, "Ciphertext got tampered with", caller
       end
@@ -479,9 +479,9 @@ module Crypto
 
       message_len = message.bytesize
       message << zeros(MACBYTES)
-      secret_key.readonly if secret_key.is_a?(LibSodium::SecretBuffer)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(message, message, message_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(LibSodium::SecretBuffer)
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
       message
     end
@@ -496,9 +496,9 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      secret_key.readonly if secret_key.is_a?(LibSodium::SecretBuffer)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       rc = crypto_box_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(LibSodium::SecretBuffer)
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
       if rc == -1
         fail CryptoError, "Ciphertext got tampered with", caller
       end
@@ -517,7 +517,7 @@ end
 module Crypto
   module GenericHash
     extend FFI::Library
-    extend LibSodium::Utils
+    extend Sodium::Utils
 
     ffi_lib :libsodium
 
@@ -571,7 +571,7 @@ module Crypto
         key_len = 0
       end
 
-      blake2b = LibSodium::Buffer.new(:uchar, hash_size)
+      blake2b = Sodium::Buffer.new(:uchar, hash_size)
       if crypto_generichash(blake2b, hash_size, message, message_len, key, key_len) == -1
         fail CryptoError
       end
@@ -595,7 +595,7 @@ module Crypto
       end
 
       state = State.new
-      blake2b = LibSodium::Buffer.new(:uchar, hash_size)
+      blake2b = Sodium::Buffer.new(:uchar, hash_size)
       if crypto_generichash_init(state, key, key_len, hash_size) == -1
         fail CryptoError
       end
@@ -634,7 +634,7 @@ module Crypto
     module ScryptSalsa208SHA256
       PACK_C = 'c*'.freeze
       extend FFI::Library
-      extend LibSodium::Utils
+      extend Sodium::Utils
 
       ffi_lib :libsodium
 
@@ -674,7 +674,7 @@ module Crypto
           raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}"
         end
 
-        out = LibSodium::SecretBuffer.new(outlen)
+        out = Sodium::SecretBuffer.new(outlen)
         rc = crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit)
         out.noaccess
         if rc == -1
@@ -716,7 +716,7 @@ module Crypto
 end
 
 Thread.exclusive do
-  if LibSodium.init == -1
+  if Sodium.init == -1
     fail LoadError, 'Could not initialize sodium'
   end
 end
