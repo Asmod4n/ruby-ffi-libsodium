@@ -205,7 +205,7 @@ module Sodium
   end
 end
 
-module Randombytes
+module RandomBytes
   extend FFI::Library
   ffi_lib :libsodium
 
@@ -246,7 +246,7 @@ module Crypto
     module_function
 
     def nonce
-      Randombytes.buf(NONCEBYTES)
+      RandomBytes.buf(NONCEBYTES)
     end
 
     def easy(message, nonce, key)
@@ -399,7 +399,7 @@ module Crypto
     module_function
 
     def nonce
-      Randombytes.buf(NONCEBYTES)
+      RandomBytes.buf(NONCEBYTES)
     end
 
     def keypair
@@ -494,7 +494,7 @@ module Crypto
 end
 
 module Crypto
-  module Generichash
+  module GenericHash
     extend FFI::Library
     extend Sodium::Utils
 
@@ -609,7 +609,7 @@ module Crypto
 end
 
 module Crypto
-  module Pwhash
+  module PwHash
     module ScryptSalsa208SHA256
       PACK_C = 'c*'.freeze
       extend FFI::Library
@@ -640,7 +640,7 @@ module Crypto
       module_function
 
       def salt
-        Randombytes.buf(SALTBYTES)
+        RandomBytes.buf(SALTBYTES)
       end
 
       def scryptsalsa208sha256(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
