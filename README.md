@@ -4,7 +4,7 @@
 Secret Key derivation and user authentication: Store the salt and the mac and you can verify a user and give him a Secret Key without storing the password or key in a database.
 
 ```ruby
-require './sodium'
+require './libsodium'
 
 password = 'test123'
 
