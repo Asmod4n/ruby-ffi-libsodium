@@ -217,9 +217,9 @@ module RandomBytes
   attach_function :stir,    :randombytes_stir,    [],         :void,    blocking: true
 
   def self.buf(size)
-    buffer = Sodium::Buffer.new(:uchar, size)
-    randombytes_buf(buffer, size)
-    buffer
+    buf = Sodium::Buffer.new(:uchar, size)
+    randombytes_buf(buf, size)
+    buf
   end
 end
 
@@ -262,20 +262,6 @@ module Crypto
       ciphertext
     end
 
-    def easy_in_place(data, nonce, key)
-      message = get_string(data)
-      check_length(nonce, NONCEBYTES, :Nonce)
-      check_length(key, KEYBYTES, :SecretKey)
-
-      message_len = message.bytesize
-      message << zeros(MACBYTES)
-      key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_secretbox_easy(message, message, message_len, nonce, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
-
-      message
-    end
-
     def open_easy(ciphertext, nonce, key)
       ciphertext_len = get_size(ciphertext)
       check_length(nonce, NONCEBYTES, :Nonce)
@@ -290,6 +276,20 @@ module Crypto
       end
 
       decrypted
+    end
+
+    def easy_in_place(data, nonce, key)
+      message = get_string(data)
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(key, KEYBYTES, :SecretKey)
+
+      message_len = message.bytesize
+      message << zeros(MACBYTES)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
+      crypto_secretbox_easy(message, message, message_len, nonce, key)
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
+
+      message
     end
 
     def open_easy_in_place(data, nonce, key, utf8 = false)
@@ -410,21 +410,21 @@ module Crypto
       [public_key, secret_key]
     end
 
-    def memory_locked_keypair
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
-      crypto_box_keypair(public_key, secret_key)
-      secret_key.noaccess
-
-      [public_key, secret_key]
-    end
-
     def seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
       crypto_box_seed_keypair(public_key, secret_key, seed)
+
+      [public_key, secret_key]
+    end
+
+    def memory_locked_keypair
+      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
+      crypto_box_keypair(public_key, secret_key)
+      secret_key.noaccess
 
       [public_key, secret_key]
     end
@@ -454,21 +454,6 @@ module Crypto
       ciphertext
     end
 
-    def easy_in_place(data, nonce, public_key, secret_key)
-      message = get_string(data)
-      check_length(nonce, NONCEBYTES, :Nonce)
-      check_length(public_key, PUBLICKEYBYTES, :PublicKey)
-      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
-
-      message_len = message.bytesize
-      message << zeros(MACBYTES)
-      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      crypto_box_easy(message, message, message_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
-
-      message
-    end
-
     def open_easy(ciphertext, nonce, public_key, secret_key)
       ciphertext_len = get_size(ciphertext)
       check_length(nonce, NONCEBYTES, :Nonce)
@@ -484,6 +469,21 @@ module Crypto
       end
 
       decrypted
+    end
+
+    def easy_in_place(data, nonce, public_key, secret_key)
+      message = get_string(data)
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
+
+      message_len = message.bytesize
+      message << zeros(MACBYTES)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
+      crypto_box_easy(message, message, message_len, nonce, public_key, secret_key)
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
+
+      message
     end
 
     def open_easy_in_place(data, nonce, public_key, secret_key, utf8 = false)
@@ -625,7 +625,7 @@ module Crypto
   end
 
   def self.generichash(*args)
-    Generichash.generichash(*args)
+    GenericHash.generichash(*args)
   end
 end
 
@@ -667,6 +667,12 @@ module Crypto
       def scryptsalsa208sha256(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd_len = get_size(passwd)
         check_length(salt, SALTBYTES, :Salt)
+        if opslimit < OPSLIMIT_INTERACTIVE
+          raise LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}"
+        end
+        if memlimit < MEMLIMIT_INTERACTIVE
+          raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}"
+        end
 
         out = Sodium::SecretBuffer.new(outlen)
         rc = crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit)
@@ -680,6 +686,12 @@ module Crypto
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd_len = get_size(passwd)
+        if opslimit < OPSLIMIT_INTERACTIVE
+          raise LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}"
+        end
+        if memlimit < MEMLIMIT_INTERACTIVE
+          raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}"
+        end
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
         if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit) == -1
