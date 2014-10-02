@@ -381,6 +381,7 @@ module Crypto
       attach_function :crypto_aead_chacha20poly1305_npubbytes,  [], :size_t
       attach_function :crypto_aead_chacha20poly1305_abytes,     [], :size_t
 
+      PRIMITIVE = 'chacha20poly1305'.freeze
       KEYBYTES  = crypto_aead_chacha20poly1305_keybytes.freeze
       NPUBBYTES = crypto_aead_chacha20poly1305_npubbytes.freeze
       ABYTES    = crypto_aead_chacha20poly1305_abytes.freeze
@@ -389,6 +390,10 @@ module Crypto
       attach_function :crypto_aead_chacha20poly1305_decrypt,  [:buffer_out, :buffer_inout, :pointer, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
 
       module_function
+
+      def primitive
+        PRIMITIVE
+      end
 
       def nonce
         RandomBytes.buf(NPUBBYTES)
@@ -706,6 +711,7 @@ module Crypto
       attach_function :crypto_pwhash_scryptsalsa208sha256_opslimit_sensitive,   [], :size_t
       attach_function :crypto_pwhash_scryptsalsa208sha256_memlimit_sensitive,   [], :size_t
 
+      PRIMITIVE             = 'scryptsalsa208sha256'.freeze
       SALTBYTES             = crypto_pwhash_scryptsalsa208sha256_saltbytes.freeze
       STRBYTES              = crypto_pwhash_scryptsalsa208sha256_strbytes.freeze
       STRPREFIX             = crypto_pwhash_scryptsalsa208sha256_strprefix.freeze
@@ -719,6 +725,10 @@ module Crypto
       attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:buffer_in, :buffer_in, :ulong_long],                                                  :int, blocking: true
 
       module_function
+
+      def primitive
+        PRIMITIVE
+      end
 
       def salt
         RandomBytes.buf(SALTBYTES)
