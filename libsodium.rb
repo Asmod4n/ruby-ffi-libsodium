@@ -370,6 +370,66 @@ module Crypto
 end
 
 module Crypto
+  module AEAD
+    module Chacha20Poly1305
+      extend FFI::Library
+      extend Sodium::Utils
+
+      ffi_lib :libsodium
+
+      attach_function :crypto_aead_chacha20poly1305_keybytes,   [], :size_t
+      attach_function :crypto_aead_chacha20poly1305_npubbytes,  [], :size_t
+      attach_function :crypto_aead_chacha20poly1305_abytes,     [], :size_t
+
+      KEYBYTES  = crypto_aead_chacha20poly1305_keybytes.freeze
+      NPUBBYTES = crypto_aead_chacha20poly1305_npubbytes.freeze
+      ABYTES    = crypto_aead_chacha20poly1305_abytes.freeze
+
+      attach_function :crypto_aead_chacha20poly1305_encrypt,  [:buffer_out, :buffer_inout, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :pointer, :buffer_in, :buffer_in], :int
+      attach_function :crypto_aead_chacha20poly1305_decrypt,  [:buffer_out, :buffer_inout, :pointer, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
+
+      module_function
+
+      def nonce
+        RandomBytes.buf(NPUBBYTES)
+      end
+
+      def encrypt(message, additional_data, nonce, key)
+        message_len = get_size(message)
+        additional_data_len = get_size(additional_data)
+        check_length(nonce, NPUBBYTES, :Nonce)
+        check_length(key, KEYBYTES, :SecretKey)
+
+        ciphertext = Sodium::Buffer.new(:uchar, message_len + ABYTES)
+        ciphertext_len = FFI::MemoryPointer.new(:ulong_long)
+        key.readonly if key.is_a?(Sodium::SecretBuffer)
+        crypto_aead_chacha20poly1305_encrypt(ciphertext, ciphertext_len, message, message_len, additional_data, additional_data_len, nil, nonce, key)
+        key.noaccess if key.is_a?(Sodium::SecretBuffer)
+
+        [ciphertext, ciphertext_len.read_ulong_long]
+      end
+
+      def decrypt(ciphertext, clen, additional_data, nonce, key)
+        ciphertext_len = get_int(clen)
+        additional_data_len = get_size(additional_data)
+        check_length(nonce, NPUBBYTES, :Nonce)
+        check_length(key, KEYBYTES, :SecretKey)
+
+        decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - ABYTES)
+        key.readonly if key.is_a?(Sodium::SecretBuffer)
+        rc = crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key)
+        key.noaccess if key.is_a?(Sodium::SecretBuffer)
+        if rc == -1
+          fail CryptoError, "Ciphertext got tampered with", caller
+        end
+
+        decrypted
+      end
+    end
+  end
+end
+
+module Crypto
   module Box
     extend FFI::Library
     extend Sodium::Utils
@@ -668,10 +728,10 @@ module Crypto
         passwd_len = get_size(passwd)
         check_length(salt, SALTBYTES, :Salt)
         if opslimit < OPSLIMIT_INTERACTIVE
-          raise LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}"
+          raise LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit.to_int}"
         end
         if memlimit < MEMLIMIT_INTERACTIVE
-          raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}"
+          raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit.to_int}"
         end
 
         out = Sodium::SecretBuffer.new(outlen)
@@ -687,10 +747,10 @@ module Crypto
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd_len = get_size(passwd)
         if opslimit < OPSLIMIT_INTERACTIVE
-          raise LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}"
+          raise LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit.to_int}"
         end
         if memlimit < MEMLIMIT_INTERACTIVE
-          raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}"
+          raise LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit.to_int}"
         end
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
