@@ -81,7 +81,9 @@ module Crypto
     end
   end
 
-  def self.onetimeauth(*args)
+  module_function
+
+  def onetimeauth(*args)
     OneTimeAuth.onetimeauth(*args)
   end
 end

@@ -35,7 +35,9 @@ module Crypto
     end
   end
 
-  def self.shorthash(*args)
+  module_function
+
+  def shorthash(*args)
     ShortHash.shorthash(*args)
   end
 end

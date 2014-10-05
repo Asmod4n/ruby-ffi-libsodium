@@ -117,7 +117,9 @@ module Crypto
     end
   end
 
-  def self.generichash(*args)
+  module_function
+
+  def generichash(*args)
     GenericHash.generichash(*args)
   end
 end

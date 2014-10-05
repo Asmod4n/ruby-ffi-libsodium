@@ -80,7 +80,7 @@ module Crypto
       [public_key, secret_key]
     end
 
-    def easy(message, nonce, public_key, secret_key)
+    def box(message, nonce, public_key, secret_key)
       message_len = get_size(message)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
@@ -94,11 +94,7 @@ module Crypto
       ciphertext
     end
 
-    def box(*args)
-      easy(*args)
-    end
-
-    def open_easy(ciphertext, nonce, public_key, secret_key)
+    def open(ciphertext, nonce, public_key, secret_key)
       ciphertext_len = get_size(ciphertext)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
@@ -113,10 +109,6 @@ module Crypto
       end
 
       decrypted
-    end
-
-    def open(*args)
-      open_easy(*args)
     end
 
     def easy_in_place(data, nonce, public_key, secret_key)
@@ -161,7 +153,9 @@ module Crypto
     end
   end
 
-  def self.box(*args)
-    Box.easy(*args)
+  module_function
+
+  def box(*args)
+    Box.box(*args)
   end
 end

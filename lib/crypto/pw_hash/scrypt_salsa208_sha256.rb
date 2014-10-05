@@ -94,7 +94,9 @@ module Crypto
       end
     end
 
-    def self.scryptsalsa208sha256(*args)
+    module_function
+
+    def scryptsalsa208sha256(*args)
       ScryptSalsa208SHA256.scryptsalsa208sha256(*args)
     end
   end

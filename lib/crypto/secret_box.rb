@@ -30,7 +30,7 @@ module Crypto
       RandomBytes.buf(NONCEBYTES)
     end
 
-    def easy(message, nonce, key)
+    def secretbox(message, nonce, key)
       message_len = get_size(message)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
@@ -43,7 +43,7 @@ module Crypto
       ciphertext
     end
 
-    def open_easy(ciphertext, nonce, key)
+    def open(ciphertext, nonce, key)
       ciphertext_len = get_size(ciphertext)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
@@ -97,5 +97,11 @@ module Crypto
 
       ciphertext
     end
+  end
+
+  module_function
+
+  def secretbox(*args)
+    SecretBox.secretbox(*args)
   end
 end

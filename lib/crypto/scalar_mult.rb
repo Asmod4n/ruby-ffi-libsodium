@@ -49,7 +49,9 @@ module Crypto
     end
   end
 
-  def self.scalarmut(*args)
+  module_function
+
+  def scalarmut(*args)
     ScalarMult.scalarmut(*args)
   end
 end

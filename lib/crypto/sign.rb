@@ -96,7 +96,9 @@ module Crypto
     end
   end
 
-  def self.sign(*args)
+  module_function
+
+  def sign(*args)
     Sign.sign(*args)
   end
 end
