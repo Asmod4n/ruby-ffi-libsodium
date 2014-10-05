@@ -96,6 +96,8 @@ module Crypto
       ciphertext
     end
 
+    alias_method :box, :easy
+
     def open_easy(ciphertext, nonce, public_key, secret_key)
       ciphertext_len = get_size(ciphertext)
       check_length(nonce, NONCEBYTES, :Nonce)
@@ -112,6 +114,8 @@ module Crypto
 
       decrypted
     end
+
+    alias_method :open, :open_easy
 
     def easy_in_place(data, nonce, public_key, secret_key)
       message = get_string(data)
@@ -187,5 +191,9 @@ module Crypto
 
       decrypted
     end
+  end
+
+  def box(*args)
+    Box.box(*args)
   end
 end
