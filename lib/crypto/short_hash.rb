@@ -18,7 +18,7 @@ module Crypto
     BYTES     = bytes.freeze
     KEYBYTES  = keybytes.freeze
 
-    attach_function :crypto_shorthash,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int
+    attach_function :crypto_shorthash,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int, blocking: true
 
     module_function
 

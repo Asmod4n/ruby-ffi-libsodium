@@ -19,8 +19,8 @@ module Crypto
     BYTES       = bytes.freeze
     SCALARBYTES = scalarbytes.freeze
 
-    attach_function :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int
-    attach_function :crypto_scalarmult,       [:buffer_out, :buffer_in, :buffer_in],  :int
+    attach_function :crypto_scalarmult_base,  [:buffer_out, :buffer_in],              :int, blocking: true
+    attach_function :crypto_scalarmult,       [:buffer_out, :buffer_in, :buffer_in],  :int, blocking: true
 
     module_function
 
