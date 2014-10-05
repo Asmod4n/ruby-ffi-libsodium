@@ -75,24 +75,25 @@ module Crypto
       message_len = get_size(message)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      sealed_message = FFI::MemoryPointer.new(:uchar, BYTES + message_len)
-      sealed_message_len = FFI::MemoryPointer.new(:ulong_long)
+      sealed_message = Sodium::Buffer.new(:uchar, message_len + BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      crypto_sign(sealed_message, sealed_message_len, message, message_len, secret_key)
+      crypto_sign(sealed_message, nil, message, message_len, secret_key)
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
-      [sealed_message, sealed_message_len.read_ulong_long]
+      sealed_message
     end
 
-    def open(sealed_message, smlen, public_key)
-      sealed_message_len = get_int(smlen)
+    def open(sealed_message, public_key)
+      sealed_message_len = get_size(sealed_message)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
-      unsealed_message = FFI::MemoryPointer.new(:uchar, sealed_message_len)
+      unsealed_message = Sodium::Buffer.new(:uchar, sealed_message_len - BYTES)
       unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
-      crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key)
+      if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == -1
+        raise Sodium::CryptoError, "Incorrect signature", caller
+      end
 
-      [unsealed_message, unsealed_message_len.read_ulong_long]
+      unsealed_message
     end
   end
 

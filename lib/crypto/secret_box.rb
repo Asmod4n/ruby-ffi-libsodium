@@ -35,7 +35,7 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      ciphertext = Sodium::Buffer.new(:uchar, MACBYTES + message_len)
+      ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(ciphertext, message, message_len, nonce, key)
       key.noaccess if key.is_a?(Sodium::SecretBuffer)

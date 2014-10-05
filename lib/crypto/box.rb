@@ -86,7 +86,7 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      ciphertext = Sodium::Buffer.new(:uchar, MACBYTES + message_len)
+      ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(ciphertext, message, message_len, nonce, public_key, secret_key)
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)

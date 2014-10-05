@@ -29,8 +29,8 @@ module Crypto
       NPUBBYTES = npubbytes.freeze
       ABYTES    = abytes.freeze
 
-      attach_function :crypto_aead_chacha20poly1305_encrypt,  [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :pointer, :buffer_in, :buffer_in], :int, blocking: true
-      attach_function :crypto_aead_chacha20poly1305_decrypt,  [:buffer_out, :buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
+      attach_function :crypto_aead_chacha20poly1305_encrypt,  [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :pointer, :buffer_in, :buffer_in], :int, blocking: true
+      attach_function :crypto_aead_chacha20poly1305_decrypt,  [:buffer_out, :pointer, :pointer, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
 
       module_function
 
@@ -45,30 +45,28 @@ module Crypto
         check_length(key, KEYBYTES, :SecretKey)
 
         ciphertext = FFI::MemoryPointer.new(:uchar, message_len + ABYTES)
-        ciphertext_len = FFI::MemoryPointer.new(:ulong_long)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
-        crypto_aead_chacha20poly1305_encrypt(ciphertext, ciphertext_len, message, message_len, additional_data, additional_data_len, nil, nonce, key)
+        crypto_aead_chacha20poly1305_encrypt(ciphertext, nil, message, message_len, additional_data, additional_data_len, nil, nonce, key)
         key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
-        [ciphertext, ciphertext_len.read_ulong_long]
+        ciphertext
       end
 
-      def decrypt(ciphertext, clen, additional_data, nonce, key)
-        ciphertext_len = get_int(clen)
+      def decrypt(ciphertext, additional_data, nonce, key)
+        ciphertext_len = get_size(ciphertext)
         additional_data_len = get_size(additional_data)
         check_length(nonce, NPUBBYTES, :Nonce)
         check_length(key, KEYBYTES, :SecretKey)
 
-        decrypted = FFI::MemoryPointer.new(:uchar, ciphertext_len)
-        decrypted_len = FFI::MemoryPointer.new(:ulong_long)
+        decrypted = FFI::MemoryPointer.new(:uchar, ciphertext_len - ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
-        rc = crypto_aead_chacha20poly1305_decrypt(decrypted, decrypted_len, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key)
+        rc = crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key)
         key.noaccess if key.is_a?(Sodium::SecretBuffer)
         if rc == -1
           raise Sodium::CryptoError, "Message forged", caller
         end
 
-        [decrypted, decrypted_len.read_ulong_long]
+        decrypted
       end
     end
   end

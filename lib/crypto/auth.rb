@@ -48,7 +48,9 @@ module Crypto
     end
   end
 
-  def self.auth(*args)
+  module_function
+
+  def auth(*args)
     Auth.auth(*args)
   end
 end
