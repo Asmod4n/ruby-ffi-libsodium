@@ -15,7 +15,6 @@ module Crypto
     attach_function :seedbytes,       :crypto_box_seedbytes,      [], :size_t
     attach_function :publickeybytes,  :crypto_box_publickeybytes, [], :size_t
     attach_function :secretkeybytes,  :crypto_box_secretkeybytes, [], :size_t
-    attach_function :beforenmbytes,   :crypto_box_beforenmbytes,  [], :size_t
     attach_function :noncebytes,      :crypto_box_noncebytes,     [], :size_t
     attach_function :macbytes,        :crypto_box_macbytes,       [], :size_t
 
@@ -23,7 +22,6 @@ module Crypto
     SEEDBYTES       = seedbytes.freeze
     PUBLICKEYBYTES  = publickeybytes.freeze
     SECRETKEYBYTES  = secretkeybytes.freeze
-    BEFORENMBYTES   = beforenmbytes.freeze
     NONCEBYTES      = noncebytes.freeze
     MACBYTES        = macbytes.freeze
 
@@ -96,7 +94,9 @@ module Crypto
       ciphertext
     end
 
-    alias_method :box, :easy
+    def box(*args)
+      easy(*args)
+    end
 
     def open_easy(ciphertext, nonce, public_key, secret_key)
       ciphertext_len = get_size(ciphertext)
@@ -115,7 +115,9 @@ module Crypto
       decrypted
     end
 
-    alias_method :open, :open_easy
+    def open(*args)
+      open_easy(*args)
+    end
 
     def easy_in_place(data, nonce, public_key, secret_key)
       message = get_string(data)
@@ -157,43 +159,9 @@ module Crypto
 
       ciphertext
     end
-
-    def beforenm(public_key, secret_key)
-      check_length(public_key, PUBLICKEYBYTES, :PublicKey)
-      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
-
-      shared_secret = Sodium::SecretBuffer.new(BEFORENMBYTES)
-      crypto_box_beforenm(shared_secret, public_key, secret_key)
-
-      shared_secret
-    end
-
-    def afternm(message, nonce, shared_secret)
-      message_len = get_size(message)
-      check_length(nonce, NONCEBYTES, :Nonce)
-      check_length(shared_secret, BEFORENMBYTES, :SharedSecret)
-
-      ciphertext = Sodium::Buffer.new(:uchar, MACBYTES + message_len)
-      crypto_box_afternm(ciphertext, message, message_len, nonce, shared_secret)
-
-      ciphertext
-    end
-
-    def open_afternm(ciphertext, nonce, shared_secret)
-      ciphertext_len = get_size(ciphertext)
-      check_length(nonce, NONCEBYTES, :Nonce)
-      check_length(shared_secret, BEFORENMBYTES, :SharedSecret)
-
-      decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
-      if crypto_box_open_afternm(decrypted, ciphertext, ciphertext_len, nonce, shared_secret) == -1
-        raise Sodium::CryptoError, "Message forged", caller
-      end
-
-      decrypted
-    end
   end
 
   def self.box(*args)
-    Box.box(*args)
+    Box.easy(*args)
   end
 end
