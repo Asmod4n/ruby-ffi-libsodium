@@ -193,7 +193,7 @@ module Crypto
     end
   end
 
-  def box(*args)
+  def self.box(*args)
     Box.box(*args)
   end
 end
