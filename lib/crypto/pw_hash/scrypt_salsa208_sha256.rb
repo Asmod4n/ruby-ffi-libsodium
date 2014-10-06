@@ -49,7 +49,7 @@ module Crypto
         RandomBytes.buf(SALTBYTES)
       end
 
-      def scryptsalsa208sha256(passwd, outlen, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
+      def scryptsalsa208sha256(outlen, passwd, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         passwd_len = get_size(passwd)
         check_length(salt, SALTBYTES, :Salt)
         if opslimit < OPSLIMIT_INTERACTIVE
