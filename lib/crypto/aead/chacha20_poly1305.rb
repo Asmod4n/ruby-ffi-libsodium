@@ -44,7 +44,7 @@ module Crypto
         check_length(nonce, NPUBBYTES, :Nonce)
         check_length(key, KEYBYTES, :SecretKey)
 
-        ciphertext = FFI::MemoryPointer.new(:uchar, message_len + ABYTES)
+        ciphertext = Sodium::Buffer.new(:uchar, message_len + ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         crypto_aead_chacha20poly1305_encrypt(ciphertext, nil, message, message_len, additional_data, additional_data_len, nil, nonce, key)
         key.noaccess if key.is_a?(Sodium::SecretBuffer)
@@ -60,7 +60,7 @@ module Crypto
         check_length(nonce, NPUBBYTES, :Nonce)
         check_length(key, KEYBYTES, :SecretKey)
 
-        decrypted = FFI::MemoryPointer.new(:uchar, ciphertext_len - ABYTES)
+        decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         rc = crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key)
         key.noaccess if key.is_a?(Sodium::SecretBuffer)

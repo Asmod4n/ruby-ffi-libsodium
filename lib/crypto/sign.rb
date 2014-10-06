@@ -34,7 +34,6 @@ module Crypto
     def keypair
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
-
       crypto_sign_keypair(public_key, secret_key)
 
       [public_key, secret_key]
@@ -45,8 +44,9 @@ module Crypto
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
-
+      seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
 
       [public_key, secret_key]
     end
@@ -65,7 +65,9 @@ module Crypto
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
       secret_key = Sodium::SecretBuffer.new(:uchar, SECRETKEYBYTES)
+      seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
       secret_key.noaccess
 
       [public_key, secret_key]
