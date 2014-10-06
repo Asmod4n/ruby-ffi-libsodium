@@ -57,6 +57,8 @@ module Sodium
         data.bytesize
       elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
         data.size
+      elsif data.nil?
+        0
       else
         fail ArgumentError, "#{data.class} doesn't respond to :bytesize or :size", caller
       end
