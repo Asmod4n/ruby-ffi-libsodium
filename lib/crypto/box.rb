@@ -73,7 +73,7 @@ module Crypto
       check_length(seed, SEEDBYTES, :Seed)
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::SecretBuffer.new(:uchar, SECRETKEYBYTES)
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       crypto_box_seed_keypair(public_key, secret_key, seed)
       secret_key.noaccess
 
