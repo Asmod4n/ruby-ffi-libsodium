@@ -37,7 +37,7 @@ module Crypto
 
     def scalarmut(secret_key, public_key)
       check_length(secret_key, SCALARBYTES, :SecretKey)
-      check_length(public_key, SCALARBYTES, :PublicKey)
+      check_length(public_key, BYTES, :PublicKey)
 
       shared_secret = Sodium::SecretBuffer.new(BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
