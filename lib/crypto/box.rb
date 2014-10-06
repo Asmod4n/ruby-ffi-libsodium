@@ -55,8 +55,10 @@ module Crypto
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
-
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
+      
       [public_key, secret_key]
     end
 
@@ -74,7 +76,9 @@ module Crypto
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
       secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
+      seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
       secret_key.noaccess
 
       [public_key, secret_key]
