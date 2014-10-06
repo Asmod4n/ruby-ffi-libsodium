@@ -53,7 +53,9 @@ module Crypto
       end
 
       def decrypt(ciphertext, additional_data, nonce, key)
-        ciphertext_len = get_size(ciphertext)
+        unless ((ciphertext_len = get_size(ciphertext)) - ABYTES) > 0
+          fail Sodium::LengthError, "Ciphertext is too short", caller
+        end
         additional_data_len = get_size(additional_data)
         check_length(nonce, NPUBBYTES, :Nonce)
         check_length(key, KEYBYTES, :SecretKey)
