@@ -1,4 +1,5 @@
 ﻿require_relative '../sodium'
+require 'forwardable'
 
 module Sodium
   class SecretBuffer
