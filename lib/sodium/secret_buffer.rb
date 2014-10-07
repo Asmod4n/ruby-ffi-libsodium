@@ -1,4 +1,5 @@
 ﻿require_relative '../sodium'
+require_relative 'utils'
 require 'forwardable'
 
 module Sodium
