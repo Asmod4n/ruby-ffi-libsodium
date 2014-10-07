@@ -20,11 +20,9 @@ module Crypto
         alias_method :primitive, :crypto_sign_ed25519_primitive
       end
 
-      attach_function :bytes,           :crypto_scalarmult_curve25519_bytes,  [], :size_t
       attach_function :publickeybytes,  :crypto_sign_ed25519_publickeybytes,  [], :size_t
       attach_function :secretkeybytes,  :crypto_sign_ed25519_secretkeybytes,  [], :size_t
 
-      BYTES           = bytes.freeze
       PUBLICKEYBYTES  = publickeybytes.freeze
       SECRETKEYBYTES  = secretkeybytes.freeze
 
@@ -36,7 +34,7 @@ module Crypto
       def pk_to_curve25519(public_key)
         check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
-        curve25519_pk = Sodium::Buffer.new(:uchar, BYTES)
+        curve25519_pk = Sodium::Buffer.new(:uchar, ScalarMult::BYTES)
         crypto_sign_ed25519_pk_to_curve25519(curve25519_pk, public_key)
 
         curve25519_pk
@@ -45,7 +43,7 @@ module Crypto
       def sk_to_curve25519(secret_key)
         check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-        curve25519_sk = Sodium::SecretBuffer.new(BYTES)
+        curve25519_sk = Sodium::SecretBuffer.new(ScalarMult::BYTES)
         secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
         crypto_sign_ed25519_sk_to_curve25519(curve25519_sk, secret_key)
         secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)

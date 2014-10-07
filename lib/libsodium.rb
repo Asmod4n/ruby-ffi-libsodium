@@ -8,12 +8,12 @@ require_relative 'crypto/auth'
 require_relative 'crypto/aead/chacha20_poly1305'
 require_relative 'crypto/box'
 require_relative 'crypto/sign'
-require_relative 'crypto/sign/ed25519'
 require_relative 'crypto/generic_hash'
 require_relative 'crypto/short_hash'
 require_relative 'crypto/pw_hash/scrypt_salsa208_sha256'
 require_relative 'crypto/one_time_auth'
 require_relative 'crypto/scalar_mult'
+require_relative 'crypto/sign/ed25519'
 
 Thread.exclusive do
   if Sodium.init == -1
