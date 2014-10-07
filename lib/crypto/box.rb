@@ -1,8 +1,9 @@
-﻿require_relative '../sodium'
+﻿require 'ffi'
 require_relative '../sodium/utils'
+require_relative '../random_bytes'
 require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
-require_relative '../random_bytes'
+require_relative '../sodium'
 
 module Crypto
   module Box
@@ -58,7 +59,7 @@ module Crypto
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
       seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
-      
+
       [public_key, secret_key]
     end
 

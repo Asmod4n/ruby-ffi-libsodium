@@ -1,4 +1,5 @@
 ﻿require_relative '../sodium'
+require 'ffi'
 
 module Sodium
   module Utils

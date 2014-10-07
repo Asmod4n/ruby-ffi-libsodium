@@ -1,4 +1,5 @@
-﻿require_relative 'sodium/buffer'
+﻿require 'ffi'
+require_relative 'sodium/buffer'
 
 module RandomBytes
   extend FFI::Library

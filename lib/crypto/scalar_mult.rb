@@ -1,8 +1,7 @@
-﻿require_relative '../sodium'
+﻿require 'ffi'
 require_relative '../sodium/utils'
 require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
-require_relative '../random_bytes'
 
 module Crypto
   module ScalarMult
