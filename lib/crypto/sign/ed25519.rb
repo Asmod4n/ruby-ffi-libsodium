@@ -1,6 +1,6 @@
 ﻿require 'ffi'
 require_relative '../../sodium/utils'
-require_relative '../../crypto/scalar_mult'
+require_relative '../scalar_mult'
 require_relative '../../sodium/buffer'
 require_relative '../../sodium/secret_buffer'
 
