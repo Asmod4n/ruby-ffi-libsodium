@@ -69,5 +69,15 @@ module Sodium
     def zeros(n)
       ZERO * n
     end
+    
+    HEXY = 'H*'.freeze
+
+    def bin2hex(bytes)
+	    bytes.to_str.unpack(HEXY).first
+    end
+
+    def hex2bin(hex)
+	    [hex].pack(HEXY)
+    end
   end
 end
