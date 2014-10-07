@@ -6,14 +6,13 @@ require 'ffi'
 module Sodium
   class SecretBuffer
     extend Forwardable
-    extend Utils
 
     def_delegators :@buffer, :address, :to_i
 
     attr_reader :size
 
     def initialize(size)
-      @size = get_int(size)
+      @size = Utils.get_int(size)
       @buffer = Sodium.malloc(@size)
       setup_finalizer
     end
