@@ -29,9 +29,10 @@ module Crypto
       siphash = Sodium::Buffer.new(:uchar, BYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_shorthash(siphash, short_data, short_data_len, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       siphash
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
   end
 

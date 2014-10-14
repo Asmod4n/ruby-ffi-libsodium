@@ -30,9 +30,10 @@ module Crypto
       mac = Sodium::Buffer.new(:uchar, BYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_auth(mac, message, message_len, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       mac
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
     def verify(mac, message, key)
@@ -41,10 +42,9 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      rc = crypto_auth_verify(mac, message, message_len, key)
+      crypto_auth_verify(mac, message, message_len, key) == 0
+    ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
-
-      rc == 0
     end
   end
 

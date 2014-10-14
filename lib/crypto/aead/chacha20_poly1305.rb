@@ -49,9 +49,10 @@ module Crypto
         ciphertext = Sodium::Buffer.new(:uchar, message_len + ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         crypto_aead_chacha20poly1305_encrypt(ciphertext, nil, message, message_len, additional_data, additional_data_len, nil, nonce, key)
-        key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
         ciphertext
+      ensure
+        key.noaccess if key.is_a?(Sodium::SecretBuffer)
       end
 
       def decrypt(ciphertext, additional_data, nonce, key)
@@ -64,13 +65,13 @@ module Crypto
 
         decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
-        rc = crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key)
-        key.noaccess if key.is_a?(Sodium::SecretBuffer)
-        if rc == -1
+        if crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key) == -1
           raise Sodium::CryptoError, "Message forged", caller
         end
 
         decrypted
+      ensure
+        key.noaccess if key.is_a?(Sodium::SecretBuffer)
       end
     end
   end

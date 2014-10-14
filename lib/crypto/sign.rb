@@ -46,9 +46,10 @@ module Crypto
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
-      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
 
       [public_key, secret_key]
+    ensure
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
     end
 
     def memory_locked_keypair
@@ -67,10 +68,11 @@ module Crypto
       secret_key = Sodium::SecretBuffer.new(:uchar, SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
-      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
       secret_key.noaccess
 
       [public_key, secret_key]
+    ensure
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
     end
 
     def sign(message, secret_key)
@@ -80,9 +82,10 @@ module Crypto
       sealed_message = Sodium::Buffer.new(:uchar, message_len + BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_sign(sealed_message, nil, message, message_len, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
       sealed_message
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
     def open(sealed_message, public_key)

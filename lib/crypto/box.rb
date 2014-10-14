@@ -58,9 +58,10 @@ module Crypto
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
-      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
 
       [public_key, secret_key]
+    ensure
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
     end
 
     def memory_locked_keypair
@@ -79,10 +80,11 @@ module Crypto
       secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
-      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
       secret_key.noaccess
 
       [public_key, secret_key]
+    ensure
+      seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
     end
 
     def box(message, nonce, public_key, secret_key)
@@ -94,9 +96,10 @@ module Crypto
       ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(ciphertext, message, message_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
       ciphertext
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
     def open(ciphertext, nonce, public_key, secret_key)
@@ -107,13 +110,13 @@ module Crypto
 
       decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      rc = crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
-      if rc == -1
+      if crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
       decrypted
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
     def easy_in_place(data, nonce, public_key, secret_key)
@@ -126,9 +129,10 @@ module Crypto
       message << zeros(MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(message, message, message_len, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
       message
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
     def open_easy_in_place(data, nonce, public_key, secret_key, utf8 = false)
@@ -142,9 +146,7 @@ module Crypto
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      rc = crypto_box_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
-      if rc == -1
+      if crypto_box_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
@@ -155,6 +157,8 @@ module Crypto
       end
 
       ciphertext
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
   end
 

@@ -39,9 +39,10 @@ module Crypto
       ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(ciphertext, message, message_len, nonce, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       ciphertext
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
     def open(ciphertext, nonce, key)
@@ -51,13 +52,14 @@ module Crypto
 
       decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      rc = crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
-      if rc == -1
+
+      if crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
       decrypted
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
     def easy_in_place(data, nonce, key)
@@ -69,9 +71,10 @@ module Crypto
       message << zeros(MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(message, message, message_len, nonce, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
 
       message
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
     def open_easy_in_place(data, nonce, key, utf8 = false)
@@ -84,9 +87,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      rc = crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key)
-      key.noaccess if key.is_a?(Sodium::SecretBuffer)
-      if rc == -1
+      if crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
@@ -97,6 +98,8 @@ module Crypto
       end
 
       ciphertext
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
   end
 

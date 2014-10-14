@@ -29,9 +29,10 @@ module Crypto
       public_key = Sodium::Buffer.new(:uchar, BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_scalarmult_base(public_key, secret_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
 
       public_key
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
     def scalarmut(secret_key, public_key)
@@ -41,10 +42,11 @@ module Crypto
       shared_secret = Sodium::SecretBuffer.new(BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_scalarmult(shared_secret, secret_key, public_key)
-      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
       shared_secret.noaccess
 
       shared_secret
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
   end
 
