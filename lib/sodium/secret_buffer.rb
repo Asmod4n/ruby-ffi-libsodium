@@ -43,7 +43,7 @@ module Sodium
     private
 
     def setup_finalizer
-      ObjectSpace.define_finalizer(@buffer, self.class.free(address))
+      ObjectSpace.define_finalizer(@buffer, self.class.free(@buffer.address))
     end
 
     def remove_finalizer
