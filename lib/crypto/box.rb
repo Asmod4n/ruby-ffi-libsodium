@@ -45,7 +45,9 @@ module Crypto
 
     def keypair
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      public_key.primitive = PRIMITIVE
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      secret_key.primitive = PRIMITIVE
       crypto_box_keypair(public_key, secret_key)
 
       [public_key, secret_key]
@@ -55,7 +57,9 @@ module Crypto
       check_length(seed, SEEDBYTES, :Seed)
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      public_key.primitive = PRIMITIVE
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      secret_key.primitive = PRIMITIVE
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
 
@@ -66,7 +70,8 @@ module Crypto
 
     def memory_locked_keypair
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
+      public_key.primitive = PRIMITIVE
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES, PRIMITIVE)
       crypto_box_keypair(public_key, secret_key)
       secret_key.noaccess
 
@@ -77,7 +82,8 @@ module Crypto
       check_length(seed, SEEDBYTES, :Seed)
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
+      public_key.primitive = PRIMITIVE
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES, PRIMITIVE)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
       secret_key.noaccess
@@ -94,6 +100,7 @@ module Crypto
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
       ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
+      ciphertext.primitive = PRIMITIVE
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(ciphertext, message, message_len, nonce, public_key, secret_key)
 

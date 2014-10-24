@@ -15,7 +15,7 @@ module RandomBytes
   module_function
 
   def buf(size)
-    buf = Sodium::Buffer.new(:uchar, size)
+    buf = Sodium::Buffer.new(:void, size, true)
     randombytes_buf(buf, size)
     buf
   end

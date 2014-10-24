@@ -27,6 +27,7 @@ module Crypto
       check_length(secret_key, SCALARBYTES, :SecretKey)
 
       public_key = Sodium::Buffer.new(:uchar, BYTES)
+      public_key.primitive = PRIMITIVE
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_scalarmult_base(public_key, secret_key)
 
@@ -39,7 +40,7 @@ module Crypto
       check_length(secret_key, SCALARBYTES, :SecretKey)
       check_length(public_key, BYTES, :PublicKey)
 
-      shared_secret = Sodium::SecretBuffer.new(BYTES)
+      shared_secret = Sodium::SecretBuffer.new(BYTES, PRIMITIVE)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_scalarmult(shared_secret, secret_key, public_key)
       shared_secret.noaccess

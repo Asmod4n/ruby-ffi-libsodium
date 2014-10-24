@@ -47,10 +47,11 @@ module Crypto
         curve25519_sk = Sodium::SecretBuffer.new(ScalarMult::BYTES)
         secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
         crypto_sign_ed25519_sk_to_curve25519(curve25519_sk, secret_key)
-        secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
         curve25519_sk.noaccess
 
         curve25519_sk
+      ensure
+        secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
       end
     end
   end

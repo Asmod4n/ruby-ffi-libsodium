@@ -47,6 +47,7 @@ module Crypto
         check_length(key, KEYBYTES, :SecretKey)
 
         ciphertext = Sodium::Buffer.new(:uchar, message_len + ABYTES)
+        ciphertext.primitive = PRIMITIVE
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         crypto_aead_chacha20poly1305_encrypt(ciphertext, nil, message, message_len, additional_data, additional_data_len, nil, nonce, key)
 

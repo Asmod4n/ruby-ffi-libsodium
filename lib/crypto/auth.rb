@@ -28,6 +28,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       mac = Sodium::Buffer.new(:uchar, BYTES)
+      mac.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_auth(mac, message, message_len, key)
 

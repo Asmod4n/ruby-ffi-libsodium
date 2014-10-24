@@ -62,6 +62,7 @@ module Crypto
       end
 
       blake2b = Sodium::Buffer.new(:uchar, hash_size)
+      blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       if crypto_generichash(blake2b, hash_size, message, message_len, key, key_len) == -1
         raise Sodium::CryptoError
@@ -89,6 +90,7 @@ module Crypto
 
       state = State.new
       blake2b = Sodium::Buffer.new(:uchar, hash_size)
+      blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
 
       if crypto_generichash_init(state, key, key_len, hash_size) == -1

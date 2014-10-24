@@ -9,11 +9,12 @@ module Sodium
 
     def_delegators :@buffer, :address, :to_i
 
-    attr_reader :size
+    attr_reader :size, :primitive
 
-    def initialize(size)
+    def initialize(size, primitive = nil)
       @size = Utils.get_int(size)
-      @buffer = Sodium.malloc(@size)
+      @primitive = primitive
+      @buffer = Sodium.malloc(size)
       setup_finalizer
     end
 
@@ -25,7 +26,7 @@ module Sodium
       remove_finalizer
       readwrite
       Sodium.free(@buffer)
-      @size = @buffer = nil
+      @size = @primitive = @buffer = nil
     end
 
     def noaccess

@@ -59,7 +59,7 @@ module Crypto
           fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit.to_int}", caller
         end
 
-        out = Sodium::SecretBuffer.new(outlen)
+        out = Sodium::SecretBuffer.new(outlen, PRIMITIVE)
         rc = crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit)
         out.noaccess
         if rc == -1
@@ -88,6 +88,9 @@ module Crypto
 
       def str_verify(str, passwd)
         check_length(str, STRBYTES, :Str)
+        unless Sodium.memcmp(str, STRPREFIX, STRPREFIX.bytesize) == 0
+          fail Sodium::CryptoError, "Supplied str is not created via #{self}.str", caller
+        end
         passwd_len = get_size(passwd)
 
         crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len) == 0
