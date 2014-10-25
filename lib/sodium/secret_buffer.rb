@@ -14,7 +14,7 @@ module Sodium
     def initialize(size, primitive = nil)
       @size = Utils.get_int(size)
       @primitive = primitive
-      @buffer = Sodium.malloc(size)
+      @buffer = Sodium.malloc(self.size)
       setup_finalizer
     end
 
