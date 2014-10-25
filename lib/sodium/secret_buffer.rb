@@ -7,54 +7,51 @@ module Sodium
   class SecretBuffer
     extend Forwardable
 
-    def_delegators :@buffer, :address, :to_i
+    def_delegators :to_ptr, :address, :to_i
 
-    attr_reader :size, :primitive
+    attr_reader :size, :primitive, :to_ptr
 
     def initialize(size, primitive = nil)
       @size = Utils.get_int(size)
       @primitive = primitive
-      @buffer = Sodium.malloc(self.size)
+      @to_ptr = Sodium.malloc(self.size)
       setup_finalizer
-    end
-
-    def to_ptr
-      @buffer
     end
 
     def free
       remove_finalizer
       readwrite
-      Sodium.free(@buffer)
-      @size = @primitive = @buffer = nil
+      Sodium.free(to_ptr)
+      @size = @primitive = @to_ptr = nil
     end
 
     def noaccess
-      Sodium.noaccess(@buffer)
+      Sodium.noaccess(to_ptr)
     end
 
     def readonly
-      Sodium.readonly(@buffer)
+      Sodium.readonly(to_ptr)
     end
 
     def readwrite
-      Sodium.readwrite(@buffer)
+      Sodium.readwrite(to_ptr)
     end
 
     private
 
     def setup_finalizer
-      ObjectSpace.define_finalizer(@buffer, self.class.free(@buffer.address))
+      ObjectSpace.define_finalizer(to_ptr, self.class.free(to_ptr.address))
     end
 
     def remove_finalizer
-      ObjectSpace.undefine_finalizer @buffer
+      ObjectSpace.undefine_finalizer to_ptr
     end
 
     def self.free(address)
       ->(obj_id) do
-        Sodium.readwrite(FFI::Pointer.new(address))
-        Sodium.free(FFI::Pointer.new(address))
+        ptr = FFI::Pointer.new(address)
+        Sodium.readwrite(ptr)
+        Sodium.free(ptr)
         true
       end
     end
