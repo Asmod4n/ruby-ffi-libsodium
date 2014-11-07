@@ -53,8 +53,6 @@ module Crypto
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_onetimeauth_verify(out, message, message_len, key) == 0
-
-      rc == 0
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
