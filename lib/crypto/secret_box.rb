@@ -54,7 +54,7 @@ module Crypto
       decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
 
-      if crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key) == -1
+      unless crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key).zero?
         raise Sodium::CryptoError, "Message forged", caller
       end
 
@@ -88,7 +88,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      if crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key) == -1
+      unless crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key).zero?
         raise Sodium::CryptoError, "Message forged", caller
       end
 

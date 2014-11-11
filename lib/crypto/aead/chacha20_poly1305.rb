@@ -66,7 +66,7 @@ module Crypto
 
         decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
-        if crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key) == -1
+        unless crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, additional_data_len, nonce, key).zero?
           raise Sodium::CryptoError, "Message forged", caller
         end
 

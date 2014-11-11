@@ -101,7 +101,7 @@ module Crypto
 
       unsealed_message = Sodium::Buffer.new(:uchar, sealed_message_len - BYTES)
       unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
-      if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == -1
+      unless crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key).zero?
         raise Sodium::CryptoError, "Incorrect signature", caller
       end
 

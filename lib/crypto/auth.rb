@@ -43,7 +43,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_auth_verify(mac, message, message_len, key) == 0
+      crypto_auth_verify(mac, message, message_len, key).zero?
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end

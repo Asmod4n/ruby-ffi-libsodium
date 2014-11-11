@@ -62,7 +62,7 @@ module Crypto
         out = Sodium::SecretBuffer.new(outlen, PRIMITIVE)
         rc = crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit)
         out.noaccess
-        if rc == -1
+        unless rc.zero?
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
         end
 
@@ -79,7 +79,7 @@ module Crypto
         end
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit) == -1
+        unless crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit).zero?
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
         end
 
@@ -88,12 +88,12 @@ module Crypto
 
       def str_verify(str, passwd)
         check_length(str, STRBYTES, :Str)
-        unless Sodium.memcmp(str, STRPREFIX, STRPREFIX.bytesize) == 0
+        unless Sodium.memcmp(str, STRPREFIX, STRPREFIX.bytesize).zero?
           fail Sodium::CryptoError, "Supplied str is not created via #{self}.str", caller
         end
         passwd_len = get_size(passwd)
 
-        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len) == 0
+        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len).zero?
       end
     end
 

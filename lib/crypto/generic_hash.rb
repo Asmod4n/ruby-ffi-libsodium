@@ -64,7 +64,7 @@ module Crypto
       blake2b = Sodium::Buffer.new(:uchar, hash_size)
       blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      if crypto_generichash(blake2b, hash_size, message, message_len, key, key_len) == -1
+      unless crypto_generichash(blake2b, hash_size, message, message_len, key, key_len).zero?
         raise Sodium::CryptoError
       end
 
@@ -93,7 +93,7 @@ module Crypto
       blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
 
-      if crypto_generichash_init(state, key, key_len, hash_size) == -1
+      unless crypto_generichash_init(state, key, key_len, hash_size).zero?
         raise Sodium::CryptoError
       end
 
@@ -105,7 +105,7 @@ module Crypto
     def update(state, message)
       message_len = get_size(message)
 
-      if crypto_generichash_update(state, message, message_len) == -1
+      unless crypto_generichash_update(state, message, message_len).zero?
         raise Sodium::CryptoError
       end
     end
@@ -113,7 +113,7 @@ module Crypto
     def final(state, blake2b)
       get_pointer(blake2b)
 
-      if crypto_generichash_final(state, blake2b, blake2b.size) == -1
+      unless crypto_generichash_final(state, blake2b, blake2b.size).zero?
         raise Sodium::CryptoError
       end
 

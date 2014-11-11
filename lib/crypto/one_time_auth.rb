@@ -52,9 +52,9 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_onetimeauth_verify(out, message, message_len, key) == 0
+      crypto_onetimeauth_verify(out, message, message_len, key).zero?
 
-      rc == 0
+      rc.zero?
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
