@@ -24,13 +24,13 @@ module Sodium
   module_function
 
   def mlock(addr, len)
-    if sodium_mlock(addr, len) == -1
+    unless sodium_mlock(addr, len).zero?
       raise MemoryError, "Could not lock length=#{len.to_int} bytes memory at address=#{addr.address}", caller
     end
   end
 
   def munlock(addr, len)
-    if sodium_munlock(addr, len) == -1
+    unless sodium_munlock(addr, len).zero?
       raise MemoryError, "Could not unlock length=#{len.to_int} bytes memory at address=#{addr.address}", caller
     end
   end
@@ -50,19 +50,19 @@ module Sodium
   end
 
   def noaccess(ptr)
-    if sodium_mprotect_noaccess(ptr) == -1
+    unless sodium_mprotect_noaccess(ptr).zero?
       raise MemoryError, "Memory at address=#{ptr.address} is not secured with #{self}.malloc", caller
     end
   end
 
   def readonly(ptr)
-    if sodium_mprotect_readonly(ptr) == -1
+    unless sodium_mprotect_readonly(ptr).zero?
       raise MemoryError, "Memory at address=#{ptr.address} is not secured with #{self}.malloc", caller
     end
   end
 
   def readwrite(ptr)
-    if sodium_mprotect_readwrite(ptr) == -1
+    unless sodium_mprotect_readwrite(ptr).zero?
       raise MemoryError, "Memory at address=#{ptr.address} is not secured with #{self}.malloc", caller
     end
   end
