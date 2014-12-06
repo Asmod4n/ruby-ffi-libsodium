@@ -23,13 +23,12 @@ module Crypto
     module_function
 
     def shorthash(short_data, key)
-      short_data_len = get_size(short_data)
       check_length(key, KEYBYTES, :SecretKey)
 
       siphash = Sodium::Buffer.new(:uchar, BYTES)
       siphash.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_shorthash(siphash, short_data, short_data_len, key)
+      crypto_shorthash(siphash, short_data, get_size(short_data), key)
 
       siphash
     ensure

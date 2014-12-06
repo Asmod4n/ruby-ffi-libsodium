@@ -7,7 +7,6 @@ require_relative '../../sodium/secret_buffer'
 module Crypto
   module PwHash
     module ScryptSalsa208SHA256
-      PACK_C    = 'c*'.freeze
       PRIMITIVE = 'scryptsalsa208sha256'.freeze
 
       extend FFI::Library
@@ -50,7 +49,7 @@ module Crypto
       end
 
       def scryptsalsa208sha256(outlen, passwd, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd_len = get_size(passwd)
+        out = nil
         check_length(salt, SALTBYTES, :Salt)
         if opslimit < OPSLIMIT_INTERACTIVE
           fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit.to_int}", caller
@@ -60,17 +59,16 @@ module Crypto
         end
 
         out = Sodium::SecretBuffer.new(outlen, PRIMITIVE)
-        rc = crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd_len, salt, opslimit, memlimit)
-        out.noaccess
-        unless rc.zero?
+        unless crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, get_size(passwd), salt, opslimit, memlimit).zero?
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
         end
 
         out
+      ensure
+        out.noaccess if out
       end
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        passwd_len = get_size(passwd)
         if opslimit < OPSLIMIT_INTERACTIVE
           fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit.to_int}", caller
         end
@@ -79,21 +77,15 @@ module Crypto
         end
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        unless crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd_len, opslimit, memlimit).zero?
+        unless crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, get_size(passwd), opslimit, memlimit).zero?
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
         end
 
-        hashed_password.read_array_of_char(STRBYTES).pack(PACK_C)
+        hashed_password.get_string(0)
       end
 
       def str_verify(str, passwd)
-        check_length(str, STRBYTES, :Str)
-        unless Sodium.memcmp(str, STRPREFIX, STRPREFIX.bytesize).zero?
-          fail Sodium::CryptoError, "Supplied str is not created via #{self}.str", caller
-        end
-        passwd_len = get_size(passwd)
-
-        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd_len).zero?
+        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, get_size(passwd)).zero?
       end
     end
 

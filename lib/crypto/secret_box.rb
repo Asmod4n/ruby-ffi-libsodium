@@ -68,10 +68,9 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      message_len = message.bytesize
       message << zeros(MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_secretbox_easy(message, message, message_len, nonce, key)
+      crypto_secretbox_easy(message, message, get_size(message), nonce, key)
 
       message
     ensure
@@ -80,7 +79,7 @@ module Crypto
 
     def open_easy_in_place(data, nonce, key, utf8 = false)
       ciphertext = get_string(data)
-      unless (message_len = ciphertext.bytesize - MACBYTES) > 0
+      unless (message_len = get_size(ciphertext) - MACBYTES) > 0
         fail Sodium::LengthError, "Ciphertext is too short", caller
       end
 

@@ -7,9 +7,8 @@ module Sodium
   class SecretBuffer
     extend Forwardable
 
-    def_delegators :to_ptr, :address, :to_i
-
     attr_reader :size, :primitive, :to_ptr
+    def_delegators :to_ptr, :address, :to_i
 
     def initialize(size, primitive = nil)
       @size = Utils.get_int(size)

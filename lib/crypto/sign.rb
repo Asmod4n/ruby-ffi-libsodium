@@ -26,8 +26,8 @@ module Crypto
     attach_function :crypto_sign_keypair,       [:buffer_out, :buffer_out],             :int, blocking: true
     attach_function :crypto_sign_seed_keypair,  [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
 
-    attach_function :crypto_sign,       [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
-    attach_function :crypto_sign_open,  [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
+    attach_function :crypto_sign,       [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
+    attach_function :crypto_sign_open,  [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
 
     module_function
 
@@ -100,7 +100,7 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
       unsealed_message = Sodium::Buffer.new(:uchar, sealed_message_len - BYTES)
-      unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
+      unsealed_message_len = FFI::MemoryPointer.new(:pointer)
       unless crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key).zero?
         raise Sodium::CryptoError, "Incorrect signature", caller
       end

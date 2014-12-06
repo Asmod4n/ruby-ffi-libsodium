@@ -36,15 +36,15 @@ module Sodium
         string
       elsif string.respond_to?(:to_str)
         string.to_str
-      elsif string.respond_to?(:read_string)
-        string.read_string
+      elsif string.respond_to?(:get_string)
+        string.get_string(0)
       else
         fail ArgumentError, "#{string.class} is not a String", caller
       end
     end
 
     def get_int(int)
-      if int.is_a?(Integer)
+      if int.is_a?(Fixnum)
         int
       elsif int.respond_to?(:to_int)
         int.to_int

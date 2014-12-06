@@ -46,7 +46,6 @@ module Crypto
     module_function
 
     def generichash(message, hash_size = BYTES, key = nil)
-      message_len = get_size(message)
       if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
         fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size.to_int} bytes", caller
       end
@@ -64,7 +63,7 @@ module Crypto
       blake2b = Sodium::Buffer.new(:uchar, hash_size)
       blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      unless crypto_generichash(blake2b, hash_size, message, message_len, key, key_len).zero?
+      unless crypto_generichash(blake2b, hash_size, message, get_size(message), key, key_len).zero?
         raise Sodium::CryptoError
       end
 
@@ -103,16 +102,12 @@ module Crypto
     end
 
     def update(state, message)
-      message_len = get_size(message)
-
-      unless crypto_generichash_update(state, message, message_len).zero?
+      unless crypto_generichash_update(state, message, get_size(message)).zero?
         raise Sodium::CryptoError
       end
     end
 
     def final(state, blake2b)
-      get_pointer(blake2b)
-
       unless crypto_generichash_final(state, blake2b, blake2b.size).zero?
         raise Sodium::CryptoError
       end
