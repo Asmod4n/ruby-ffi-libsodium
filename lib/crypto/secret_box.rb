@@ -68,9 +68,10 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
+      message_len = get_size(message)
       message << zeros(MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_secretbox_easy(message, message, get_size(message), nonce, key)
+      crypto_secretbox_easy(message, message, message_len, nonce, key)
 
       message
     ensure
