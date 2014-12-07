@@ -85,6 +85,7 @@ module Crypto
       end
 
       def str_verify(str, passwd)
+        check_length(str, STRBYTES - 1, :Str)
         crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, get_size(passwd)).zero?
       end
     end
