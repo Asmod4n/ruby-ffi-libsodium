@@ -1,10 +1,7 @@
 ﻿require 'ffi'
+require_relative 'sodium/errors'
 
 module Sodium
-  class CryptoError < StandardError; end
-  class LengthError < ArgumentError; end
-  class MemoryError < StandardError; end
-
   extend FFI::Library
   ffi_lib :libsodium
 
@@ -25,26 +22,26 @@ module Sodium
 
   def mlock(addr, len)
     unless sodium_mlock(addr, len).zero?
-      raise MemoryError, "Could not lock length=#{len.to_int} bytes memory at address=#{addr.address}", caller
+      raise MemoryError, "Could not lock length=#{len} bytes memory at address=#{addr.address}", caller
     end
   end
 
   def munlock(addr, len)
     unless sodium_munlock(addr, len).zero?
-      raise MemoryError, "Could not unlock length=#{len.to_int} bytes memory at address=#{addr.address}", caller
+      raise MemoryError, "Could not unlock length=#{len} bytes memory at address=#{addr.address}", caller
     end
   end
 
   def malloc(size)
     unless (mem = sodium_malloc(size))
-      raise NoMemoryError, "Failed to allocate memory size=#{size.to_int} bytes", caller
+      raise NoMemoryError, "Failed to allocate memory size=#{size} bytes", caller
     end
     mem
   end
 
   def allocarray(count, size)
     unless (mem = sodium_allocarray(count, size))
-      raise NoMemoryError, "Failed to allocate memory size=#{count.to_int * size.to_int} bytes", caller
+      raise NoMemoryError, "Failed to allocate memory size=#{count * size} bytes", caller
     end
     mem
   end

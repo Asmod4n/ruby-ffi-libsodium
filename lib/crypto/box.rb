@@ -3,7 +3,7 @@ require_relative '../sodium/utils'
 require_relative '../random_bytes'
 require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
-require_relative '../sodium'
+require_relative '../sodium/errors'
 
 module Crypto
   module Box
@@ -29,8 +29,8 @@ module Crypto
     attach_function :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int, blocking: true
     attach_function :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
 
-    attach_function :crypto_box_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
-    attach_function :crypto_box_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_easy,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_open_easy,    [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
 
     attach_function :crypto_box_beforenm,     [:buffer_out, :buffer_in, :buffer_in],  :int, blocking: true
 
@@ -152,7 +152,7 @@ module Crypto
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      unless crypto_box_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, public_key, secret_key).zero?
+      unless crypto_box_open_easy(ciphertext, ciphertext, get_size(ciphertext), nonce, public_key, secret_key).zero?
         raise Sodium::CryptoError, "Message forged", caller
       end
 

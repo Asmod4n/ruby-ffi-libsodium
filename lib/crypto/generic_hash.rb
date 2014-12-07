@@ -1,6 +1,6 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium'
+require_relative '../sodium/errors'
 require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 
@@ -47,7 +47,7 @@ module Crypto
 
     def generichash(message, hash_size = BYTES, key = nil)
       if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
-        fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size.to_int} bytes", caller
+        fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size} bytes", caller
       end
 
       if key
@@ -84,7 +84,7 @@ module Crypto
       end
 
       if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
-        fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size.to_int} bytes", caller
+        fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size} bytes", caller
       end
 
       state = State.new

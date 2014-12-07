@@ -1,4 +1,5 @@
-﻿require_relative 'sodium'
+﻿require_relative 'sodium/errors'
+require_relative 'sodium'
 require_relative 'sodium/utils'
 require_relative 'sodium/buffer'
 require_relative 'sodium/secret_buffer'

@@ -1,4 +1,4 @@
-﻿require_relative '../sodium'
+﻿require_relative '../sodium/errors'
 require 'ffi'
 
 module Sodium
@@ -8,16 +8,17 @@ module Sodium
 
     def check_length(data, length, description)
       if data.is_a?(String) ||data.respond_to?(:bytesize)
-        unless data.bytesize == length.to_int
-          fail Sodium::LengthError, "Expected a length=#{length.to_int} bytes #{description}, got size=#{data.bytesize} bytes", caller
+        unless data.bytesize == length
+          fail Sodium::LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.bytesize} bytes", caller
         end
       elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
-        unless data.size == length.to_int
-          fail Sodium::LengthError, "Expected a length=#{length.to_int} bytes #{description}, got size=#{data.size} bytes", caller
+        unless data.size == length
+          fail Sodium::LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.size} bytes", caller
         end
       else
-        fail ArgumentError, "#{description} must be of type String or FFI::Pointer and be length=#{length.to_int} bytes long", caller
+        fail ArgumentError, "#{description} must be of type String or FFI::Pointer and be length=#{length} bytes long", caller
       end
+
       true
     end
 

@@ -87,7 +87,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      unless crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext.bytesize, nonce, key).zero?
+      unless crypto_secretbox_open_easy(ciphertext, ciphertext, get_size(ciphertext), nonce, key).zero?
         raise Sodium::CryptoError, "Message forged", caller
       end
 

@@ -3,7 +3,7 @@ require_relative '../../sodium/utils'
 require_relative '../../random_bytes'
 require_relative '../../sodium/buffer'
 require_relative '../../sodium/secret_buffer'
-require_relative '../../sodium'
+require_relative '../../sodium/errors'
 
 module Crypto
   module AEAD

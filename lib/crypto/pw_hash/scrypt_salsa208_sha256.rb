@@ -1,7 +1,7 @@
 ﻿require 'ffi'
 require_relative '../../sodium/utils'
 require_relative '../../random_bytes'
-require_relative '../../sodium'
+require_relative '../../sodium/errors'
 require_relative '../../sodium/secret_buffer'
 
 module Crypto
@@ -52,15 +52,15 @@ module Crypto
         out = nil
         check_length(salt, SALTBYTES, :Salt)
         if opslimit < OPSLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit.to_int}", caller
+          fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}", caller
         end
         if memlimit < MEMLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit.to_int}", caller
+          fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}", caller
         end
 
         out = Sodium::SecretBuffer.new(outlen, PRIMITIVE)
         unless crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, get_size(passwd), salt, opslimit, memlimit).zero?
-          raise NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
+          raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
 
         out
@@ -70,15 +70,15 @@ module Crypto
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         if opslimit < OPSLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit.to_int}", caller
+          fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}", caller
         end
         if memlimit < MEMLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit.to_int}", caller
+          fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}", caller
         end
 
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
         unless crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, get_size(passwd), opslimit, memlimit).zero?
-          raise NoMemoryError, "Failed to allocate memory max size=#{memlimit.to_int} bytes", caller
+          raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
 
         hashed_password.get_string(0)
