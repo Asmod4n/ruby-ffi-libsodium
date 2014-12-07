@@ -1,4 +1,4 @@
-﻿require_relative '../sodium/errors'
+﻿require_relative 'errors'
 require 'ffi'
 
 module Sodium
