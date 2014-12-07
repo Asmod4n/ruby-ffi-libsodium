@@ -18,17 +18,17 @@ module Crypto
     BYTES     = bytes.freeze
     KEYBYTES  = keybytes.freeze
 
-    attach_function :crypto_onetimeauth,        [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int, blocking: true
-    attach_function :crypto_onetimeauth_verify, [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
+    attach_function :crypto_onetimeauth,        [:buffer_out, :buffer_in, :ulong_long, :buffer_in], :int
+    attach_function :crypto_onetimeauth_verify, [:buffer_in, :buffer_in, :ulong_long, :buffer_in],  :int
 
     class State < FFI::Struct
       layout  :aligner, :ulong_long,
               :opaque,  [:uchar, 136]
     end
 
-    attach_function :crypto_onetimeauth_init,   [State.ptr, :buffer_in],              :int, blocking: true
-    attach_function :crypto_onetimeauth_update, [State.ptr, :buffer_in, :ulong_long], :int, blocking: true
-    attach_function :crypto_onetimeauth_final,  [State.ptr, :buffer_out],             :int, blocking: true
+    attach_function :crypto_onetimeauth_init,   [State.ptr, :buffer_in],              :int
+    attach_function :crypto_onetimeauth_update, [State.ptr, :buffer_in, :ulong_long], :int
+    attach_function :crypto_onetimeauth_final,  [State.ptr, :buffer_out],             :int
 
     module_function
 

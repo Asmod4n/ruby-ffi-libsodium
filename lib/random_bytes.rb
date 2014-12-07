@@ -9,8 +9,8 @@ module RandomBytes
 
   attach_function :random,  :randombytes_random,  [],         :uint32,  blocking: true
   attach_function :uniform, :randombytes_uniform, [:uint32],  :uint32,  blocking: true
-  attach_function :close,   :randombytes_close,   [],         :int,     blocking: true
-  attach_function :stir,    :randombytes_stir,    [],         :void,    blocking: true
+  attach_function :close,   :randombytes_close,   [],         :int
+  attach_function :stir,    :randombytes_stir,    [],         :void
 
   module_function
 

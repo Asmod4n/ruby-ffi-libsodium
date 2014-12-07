@@ -38,9 +38,9 @@ module Crypto
       OPSLIMIT_SENSITIVE    = opslimit_sensitive.freeze
       MEMLIMIT_SENSITIVE    = memlimit_sensitive.freeze
 
-      attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int, blocking: true
-      attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int, blocking: true
-      attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:string, :buffer_in, :ulong_long],                                                  :int, blocking: true
+      attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int
+      attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int
+      attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:string, :buffer_in, :ulong_long],                                                     :int
 
       module_function
 

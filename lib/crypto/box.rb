@@ -26,16 +26,16 @@ module Crypto
     NONCEBYTES      = noncebytes.freeze
     MACBYTES        = macbytes.freeze
 
-    attach_function :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int, blocking: true
-    attach_function :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_keypair,      [:buffer_out, :buffer_out],             :int
+    attach_function :crypto_box_seed_keypair, [:buffer_out, :buffer_out, :buffer_in], :int
 
-    attach_function :crypto_box_easy,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
-    attach_function :crypto_box_open_easy,    [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_easy,         [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int
+    attach_function :crypto_box_open_easy,    [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int
 
-    attach_function :crypto_box_beforenm,     [:buffer_out, :buffer_in, :buffer_in],  :int, blocking: true
+    attach_function :crypto_box_beforenm,     [:buffer_out, :buffer_in, :buffer_in],  :int
 
-    attach_function :crypto_box_afternm,      [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
-    attach_function :crypto_box_open_afternm, [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int, blocking: true
+    attach_function :crypto_box_afternm,      [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
+    attach_function :crypto_box_open_afternm, [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
 
     module_function
 

@@ -27,7 +27,7 @@ module Crypto
     KEYBYTES_MAX  = keybytes_max.freeze
     KEYBYTES      = keybytes.freeze
 
-    attach_function :crypto_generichash,  [:buffer_out, :size_t, :buffer_in, :ulong_long, :buffer_in, :size_t], :int, blocking: true
+    attach_function :crypto_generichash,  [:buffer_out, :size_t, :buffer_in, :ulong_long, :buffer_in, :size_t], :int
 
     class State < FFI::Struct
       pack 64
@@ -39,9 +39,9 @@ module Crypto
               :last_node, :uint8
     end
 
-    attach_function :crypto_generichash_init,   [State.ptr, :buffer_in, :size_t, :size_t],  :int, blocking: true
-    attach_function :crypto_generichash_update, [State.ptr, :buffer_in, :ulong_long],       :int, blocking: true
-    attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int, blocking: true
+    attach_function :crypto_generichash_init,   [State.ptr, :buffer_in, :size_t, :size_t],  :int
+    attach_function :crypto_generichash_update, [State.ptr, :buffer_in, :ulong_long],       :int
+    attach_function :crypto_generichash_final,  [State.ptr, :buffer_out, :ulong_long],      :int
 
     module_function
 

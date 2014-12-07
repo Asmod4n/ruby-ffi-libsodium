@@ -23,11 +23,11 @@ module Crypto
     PUBLICKEYBYTES  = publickeybytes.freeze
     SECRETKEYBYTES  = secretkeybytes.freeze
 
-    attach_function :crypto_sign_keypair,       [:buffer_out, :buffer_out],             :int, blocking: true
-    attach_function :crypto_sign_seed_keypair,  [:buffer_out, :buffer_out, :buffer_in], :int, blocking: true
+    attach_function :crypto_sign_keypair,       [:buffer_out, :buffer_out],             :int
+    attach_function :crypto_sign_seed_keypair,  [:buffer_out, :buffer_out, :buffer_in], :int
 
-    attach_function :crypto_sign,       [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
-    attach_function :crypto_sign_open,  [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int, blocking: true
+    attach_function :crypto_sign,       [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int
+    attach_function :crypto_sign_open,  [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int
 
     module_function
 
