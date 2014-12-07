@@ -7,6 +7,7 @@ require_relative '../../sodium/secret_buffer'
 module Crypto
   module PwHash
     module ScryptSalsa208SHA256
+      PACK_C    = 'c*'.freeze
       PRIMITIVE = 'scryptsalsa208sha256'.freeze
 
       extend FFI::Library
@@ -81,7 +82,7 @@ module Crypto
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
 
-        hashed_password.get_string(0)
+        hashed_password.read_array_of_char(STRBYTES).pack(PACK_C)
       end
 
       def str_verify(str, passwd)
