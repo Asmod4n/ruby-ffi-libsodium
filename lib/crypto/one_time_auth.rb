@@ -47,7 +47,6 @@ module Crypto
 
     def verify(out, message, key)
       check_length(out, BYTES, :Authenticator)
-      message_len = get_size(message)
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
