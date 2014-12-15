@@ -1,7 +1,5 @@
 ﻿require 'ffi'
 require_relative 'sodium/errors'
-require_relative 'sodium/utils'
-require_relative 'sodium/buffer'
 
 module Sodium
   extend FFI::Library

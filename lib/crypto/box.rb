@@ -130,7 +130,7 @@ module Crypto
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
-    def open_easy_in_place(data, nonce, public_key, secret_key, encoding = false)
+    def open_easy_in_place(data, nonce, public_key, secret_key, encoding = nil)
       ciphertext = String(data)
       ciphertext_len = ciphertext.bytesize
       if (message_len = ciphertext_len - MACBYTES) > 0

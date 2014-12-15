@@ -1,6 +1,4 @@
-﻿require 'ffi'
-require_relative 'secret_buffer'
-require_relative 'errors'
+﻿require_relative 'errors'
 
 module Sodium
   module Utils
@@ -8,34 +6,20 @@ module Sodium
     module_function
 
     def get_size(data)
-      case data
-      when FFI::Pointer, SecretBuffer
-        data.size
-      when String
+      if data.respond_to?(:bytesize)
         data.bytesize
-      when NilClass
+      elsif data.nil?
         0
       else
-        fail TypeError, "#{data.class} must be of type FFI::Pointer, Sodium::SecretBufffer, String or NilClass", caller
+        data.size
       end
     end
 
     def check_length(data, length, description)
-      case data
-      when FFI::Pointer, SecretBuffer
-        if data.size == length
-          true
-        else
-          fail LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.size} bytes", caller
-        end
-      when String
-        if data.bytesize == length
-          true
-        else
-          fail LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.bytesize} bytes", caller
-        end
+      if data.respond_to?(:bytesize)
+        data.bytesize == length || fail(LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.bytesize} bytes", caller)
       else
-        fail TypeError, "#{data.class} must be of type FFI::Pointer, Sodium::SecretBufffer or String", caller
+        data.size == length || fail(LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.size} bytes", caller)
       end
     end
 
@@ -48,11 +32,11 @@ module Sodium
     HEXY = 'H*'.freeze
 
     def bin2hex(bytes)
-      bytes.to_str.unpack(HEXY).first
+      String(bytes).unpack(HEXY).first
     end
 
     def hex2bin(hex)
-      [hex].pack(HEXY)
+      [String(hex)].pack(HEXY)
     end
   end
 
