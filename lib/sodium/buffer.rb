@@ -2,12 +2,10 @@
 
 module Sodium
   class Buffer < FFI::MemoryPointer
-    attr_accessor :primitive
-
-    def to_bytes
+    def to_str
       read_bytes(size)
     end
-
-    alias_method :to_str, :to_bytes
   end
+
+  Buffer.freeze
 end

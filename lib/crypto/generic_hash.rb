@@ -1,8 +1,8 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium/errors'
 require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
+require_relative '../sodium/errors'
 
 module Crypto
   module GenericHash
@@ -46,28 +46,19 @@ module Crypto
     module_function
 
     def generichash(message, hash_size = BYTES, key = nil)
-      if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
-        fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size} bytes", caller
-      end
-
       if key
         key_len = get_size(key)
-
-        if key_len > KEYBYTES_MAX ||key_len < KEYBYTES_MIN
-          fail Sodium::LengthError, "Key length must be between #{KEYBYTES_MIN} and #{KEYBYTES_MAX} bytes, got length=#{key_len} bytes", caller
-        end
       else
         key_len = 0
       end
 
       blake2b = Sodium::Buffer.new(:uchar, hash_size)
-      blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      unless crypto_generichash(blake2b, hash_size, message, get_size(message), key, key_len).zero?
+      if crypto_generichash(blake2b, hash_size, message, get_size(message), key, key_len) == 0
+        blake2b
+      else
         raise Sodium::CryptoError
       end
-
-      blake2b
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -75,46 +66,35 @@ module Crypto
     def init(key = nil, hash_size = BYTES)
       if key
         key_len = get_size(key)
-
-        if key_len > KEYBYTES_MAX ||key_len < KEYBYTES_MIN
-          fail Sodium::LengthError, "Key length must be between #{KEYBYTES_MIN} and #{KEYBYTES_MAX} bytes, got length=#{key_len} bytes", caller
-        end
       else
         key_len = 0
       end
 
-      if hash_size > BYTES_MAX ||hash_size < BYTES_MIN
-        fail Sodium::LengthError, "Hash size must be between #{BYTES_MIN} and #{BYTES_MAX} bytes, got size=#{hash_size} bytes", caller
-      end
-
       state = State.new
-      blake2b = Sodium::Buffer.new(:uchar, hash_size)
-      blake2b.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-
-      unless crypto_generichash_init(state, key, key_len, hash_size).zero?
+      if crypto_generichash_init(state, key, key_len, hash_size) == 0
+        [state, Sodium::Buffer.new(:uchar, hash_size)]
+      else
         raise Sodium::CryptoError
       end
-
-      [state, blake2b]
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
     def update(state, message)
-      unless crypto_generichash_update(state, message, get_size(message)).zero?
-        raise Sodium::CryptoError
-      end
+      crypto_generichash_update(state, message, get_size(message))
     end
 
     def final(state, blake2b)
-      unless crypto_generichash_final(state, blake2b, blake2b.size).zero?
+      if crypto_generichash_final(state, blake2b, blake2b.size) == 0
+        blake2b
+      else
         raise Sodium::CryptoError
       end
-
-      blake2b
     end
   end
+
+  GenericHash.freeze
 
   module_function
 

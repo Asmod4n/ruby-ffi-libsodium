@@ -1,58 +1,61 @@
 ﻿require 'forwardable'
-require_relative 'utils'
 require_relative '../sodium'
+require_relative 'mprotect'
 require 'ffi'
 
 module Sodium
   class SecretBuffer
     extend Forwardable
 
-    attr_reader :size, :primitive, :to_ptr
-    def_delegators :to_ptr, :address, :to_i
+    attr_reader :size, :to_ptr
+    def_delegators :@to_ptr, :address, :to_i
 
-    def initialize(size, primitive = nil)
-      @size = Utils.get_int(size)
-      @primitive = primitive
-      @to_ptr = Sodium.malloc(self.size)
+    def initialize(size)
+      @size = Integer(size)
+      @to_ptr = Sodium.malloc(@size)
       setup_finalizer
     end
 
     def free
       remove_finalizer
-      readwrite
-      Sodium.free(to_ptr)
-      @size = @primitive = @to_ptr = nil
+      Sodium::Mprotect.readonly(@to_ptr)
+      Sodium.free(@to_ptr)
+      remove_instance_variable(:@size)
+      remove_instance_variable(:@to_ptr)
+      true
     end
 
     def noaccess
-      Sodium.noaccess(to_ptr)
+      Sodium::Mprotect.noaccess(@to_ptr)
     end
 
     def readonly
-      Sodium.readonly(to_ptr)
+      Sodium::Mprotect.readonly(@to_ptr)
     end
 
     def readwrite
-      Sodium.readwrite(to_ptr)
+      Sodium::Mprotect.readwrite(@to_ptr)
     end
 
     private
 
     def setup_finalizer
-      ObjectSpace.define_finalizer(to_ptr, self.class.free(to_ptr.address))
+      ObjectSpace.define_finalizer(@to_ptr, self.class.free(@to_ptr.address))
     end
 
     def remove_finalizer
-      ObjectSpace.undefine_finalizer to_ptr
+      ObjectSpace.undefine_finalizer @to_ptr
     end
 
     def self.free(address)
       ->(obj_id) do
         ptr = FFI::Pointer.new(address)
-        Sodium.readwrite(ptr)
+        Sodium::Mprotect.readonly(ptr)
         Sodium.free(ptr)
         true
       end
     end
   end
+
+  SecretBuffer.freeze
 end

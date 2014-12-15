@@ -26,7 +26,6 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       siphash = Sodium::Buffer.new(:uchar, BYTES)
-      siphash.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_shorthash(siphash, short_data, get_size(short_data), key)
 
@@ -35,6 +34,8 @@ module Crypto
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
   end
+
+  ShortHash.freeze
 
   module_function
 

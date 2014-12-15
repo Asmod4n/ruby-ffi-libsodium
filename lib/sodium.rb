@@ -16,53 +16,22 @@ module Sodium
   attach_function :sodium_munlock,            [:pointer, :size_t],  :int
   attach_function :sodium_malloc,             [:size_t],            :pointer
   attach_function :sodium_allocarray,         [:size_t, :size_t],   :pointer
-  attach_function :sodium_mprotect_noaccess,  [:pointer],           :int
-  attach_function :sodium_mprotect_readonly,  [:pointer],           :int
-  attach_function :sodium_mprotect_readwrite, [:pointer],           :int
 
   module_function
 
   def mlock(addr, len)
-    unless sodium_mlock(addr, len).zero?
-      raise MemoryError, "Could not lock length=#{len} bytes memory at address=#{addr.address}", caller
-    end
+    sodium_mlock(addr, len) == 0 || raise(MemoryError, "Could not lock length=#{len} bytes memory at address=#{addr.address}", caller)
   end
 
   def munlock(addr, len)
-    unless sodium_munlock(addr, len).zero?
-      raise MemoryError, "Could not unlock length=#{len} bytes memory at address=#{addr.address}", caller
-    end
+    sodium_munlock(addr, len) == 0 || raise(MemoryError, "Could not unlock length=#{len} bytes memory at address=#{addr.address}", caller)
   end
 
   def malloc(size)
-    unless (mem = sodium_malloc(size))
-      raise NoMemoryError, "Failed to allocate memory size=#{size} bytes", caller
-    end
-    mem
+    sodium_malloc(size) || raise(NoMemoryError, "Failed to allocate memory size=#{size} bytes", caller)
   end
 
   def allocarray(count, size)
-    unless (mem = sodium_allocarray(count, size))
-      raise NoMemoryError, "Failed to allocate memory size=#{count * size} bytes", caller
-    end
-    mem
-  end
-
-  def noaccess(ptr)
-    unless sodium_mprotect_noaccess(ptr).zero?
-      raise MemoryError, "Memory at address=#{ptr.address} is not secured with #{self}.malloc", caller
-    end
-  end
-
-  def readonly(ptr)
-    unless sodium_mprotect_readonly(ptr).zero?
-      raise MemoryError, "Memory at address=#{ptr.address} is not secured with #{self}.malloc", caller
-    end
-  end
-
-  def readwrite(ptr)
-    unless sodium_mprotect_readwrite(ptr).zero?
-      raise MemoryError, "Memory at address=#{ptr.address} is not secured with #{self}.malloc", caller
-    end
+    sodium_allocarray(count, size) || raise(NoMemoryError, "Failed to allocate memory size=#{count * size} bytes", caller)
   end
 end

@@ -33,9 +33,7 @@ module Crypto
 
     def keypair
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      public_key.primitive = PRIMITIVE
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
-      secret_key.primitive = PRIMITIVE
       crypto_sign_keypair(public_key, secret_key)
 
       [public_key, secret_key]
@@ -45,9 +43,7 @@ module Crypto
       check_length(seed, SEEDBYTES, :Seed)
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      public_key.primitive = PRIMITIVE
       secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
-      secret_key.primitive = PRIMITIVE
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
 
@@ -58,8 +54,7 @@ module Crypto
 
     def memory_locked_keypair
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      public_key.primitive = PRIMITIVE
-      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES, PRIMITIVE)
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       crypto_sign_keypair(public_key, secret_key)
       secret_key.noaccess
 
@@ -70,8 +65,7 @@ module Crypto
       check_length(seed, SEEDBYTES, :Seed)
 
       public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      public_key.primitive = PRIMITIVE
-      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES, PRIMITIVE)
+      secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
       secret_key.noaccess
@@ -86,7 +80,6 @@ module Crypto
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
       sealed_message = Sodium::Buffer.new(:uchar, message_len + BYTES)
-      sealed_message.primitive = PRIMITIVE
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_sign(sealed_message, nil, message, message_len, secret_key)
 
@@ -100,14 +93,16 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
       unsealed_message = Sodium::Buffer.new(:uchar, sealed_message_len - BYTES)
-      unsealed_message_len = FFI::MemoryPointer.new(:pointer)
-      unless crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key).zero?
+      unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
+      if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == 0
+        unsealed_message
+      else
         raise Sodium::CryptoError, "Incorrect signature", caller
       end
-
-      unsealed_message
     end
   end
+
+  Sign.freeze
 
   module_function
 

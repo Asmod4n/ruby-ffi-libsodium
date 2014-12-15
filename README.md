@@ -11,7 +11,7 @@ bundle update
 require 'bundler/setup'
 require 'libsodium'
 
-password = 'test123'
+password = Crypto.generichash('test123')
 
 salt = Crypto::PwHash::ScryptSalsa208SHA256.salt
 key = Crypto::PwHash.scryptsalsa208sha256(Crypto::Auth::KEYBYTES, password, salt)

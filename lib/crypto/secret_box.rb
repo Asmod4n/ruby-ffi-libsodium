@@ -37,7 +37,6 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
-      ciphertext.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(ciphertext, message, message_len, nonce, key)
 
@@ -53,22 +52,21 @@ module Crypto
 
       decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-
-      unless crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key).zero?
+      if crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key) == 0
+        decrypted
+      else
         raise Sodium::CryptoError, "Message forged", caller
       end
-
-      decrypted
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
     def easy_in_place(data, nonce, key)
-      message = get_string(data)
+      message = String(data)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      message_len = get_size(message)
+      message_len = message.bytesize
       message << zeros(MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(message, message, message_len, nonce, key)
@@ -78,31 +76,34 @@ module Crypto
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
-    def open_easy_in_place(data, nonce, key, utf8 = false)
-      ciphertext = get_string(data)
-      unless (message_len = get_size(ciphertext) - MACBYTES) > 0
+    def open_easy_in_place(data, nonce, key, encoding = false)
+      ciphertext = String(data)
+      ciphertext_len = ciphertext.bytesize
+      if (message_len = ciphertext_len - MACBYTES) > 0
+        check_length(nonce, NONCEBYTES, :Nonce)
+        check_length(key, KEYBYTES, :SecretKey)
+
+        key.readonly if key.is_a?(Sodium::SecretBuffer)
+        if crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext_len, nonce, key) == 0
+          if encoding
+            ciphertext.slice!(message_len..-1).force_encoding(encoding)
+          else
+            ciphertext.slice!(message_len..-1)
+          end
+
+          ciphertext
+        else
+          raise Sodium::CryptoError, "Message forged", caller
+        end
+      else
         fail Sodium::LengthError, "Ciphertext is too short", caller
       end
-
-      check_length(nonce, NONCEBYTES, :Nonce)
-      check_length(key, KEYBYTES, :SecretKey)
-
-      key.readonly if key.is_a?(Sodium::SecretBuffer)
-      unless crypto_secretbox_open_easy(ciphertext, ciphertext, get_size(ciphertext), nonce, key).zero?
-        raise Sodium::CryptoError, "Message forged", caller
-      end
-
-      if utf8
-        ciphertext.slice!(message_len..-1).force_encoding(Encoding::UTF_8)
-      else
-        ciphertext.slice!(message_len..-1)
-      end
-
-      ciphertext
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
   end
+
+  SecretBox.freeze
 
   module_function
 

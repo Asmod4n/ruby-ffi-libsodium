@@ -46,7 +46,6 @@ module Crypto
         check_length(key, KEYBYTES, :SecretKey)
 
         ciphertext = Sodium::Buffer.new(:uchar, message_len + ABYTES)
-        ciphertext.primitive = PRIMITIVE
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         crypto_aead_chacha20poly1305_encrypt(ciphertext, nil, message, message_len, additional_data, get_size(additional_data), nil, nonce, key)
 
@@ -56,22 +55,28 @@ module Crypto
       end
 
       def decrypt(ciphertext, additional_data, nonce, key)
-        unless ((ciphertext_len = get_size(ciphertext)) - ABYTES) > 0
+        ciphertext_len = get_size(ciphertext)
+        if (decrypted_len = ciphertext_len - ABYTES) > 0
+          check_length(nonce, NPUBBYTES, :Nonce)
+          check_length(key, KEYBYTES, :SecretKey)
+
+          decrypted = Sodium::Buffer.new(:uchar, decrypted_len)
+          key.readonly if key.is_a?(Sodium::SecretBuffer)
+          if crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, get_size(additional_data), nonce, key) == 0
+            decrypted
+          else
+            raise Sodium::CryptoError, "Message forged", caller
+          end
+        else
           fail Sodium::LengthError, "Ciphertext is too short", caller
         end
-        check_length(nonce, NPUBBYTES, :Nonce)
-        check_length(key, KEYBYTES, :SecretKey)
-
-        decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - ABYTES)
-        key.readonly if key.is_a?(Sodium::SecretBuffer)
-        unless crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, get_size(additional_data), nonce, key).zero?
-          raise Sodium::CryptoError, "Message forged", caller
-        end
-
-        decrypted
       ensure
         key.noaccess if key.is_a?(Sodium::SecretBuffer)
       end
     end
+
+    Chacha20Poly1305.freeze
   end
+
+  AEAD.freeze
 end

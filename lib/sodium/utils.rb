@@ -1,68 +1,41 @@
-﻿require_relative 'errors'
-require 'ffi'
+﻿require 'ffi'
+require_relative 'secret_buffer'
+require_relative 'errors'
 
 module Sodium
   module Utils
 
     module_function
 
-    def check_length(data, length, description)
-      if data.is_a?(String) ||data.respond_to?(:bytesize)
-        unless data.bytesize == length
-          fail Sodium::LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.bytesize} bytes", caller
-        end
-      elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
-        unless data.size == length
-          fail Sodium::LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.size} bytes", caller
-        end
-      else
-        fail ArgumentError, "#{description} must be of type String or FFI::Pointer and be length=#{length} bytes long", caller
-      end
-
-      true
-    end
-
-    def get_pointer(ptr)
-      if ptr.is_a?(FFI::Pointer)
-        ptr
-      elsif ptr.respond_to?(:to_ptr)
-        ptr.to_ptr
-      else
-        fail ArgumentError, "#{ptr.class} is not a FFI::Pointer", caller
-      end
-    end
-
-    def get_string(string)
-      if string.is_a?(String)
-        string
-      elsif string.respond_to?(:to_str)
-        string.to_str
-      elsif string.respond_to?(:get_string)
-        string.get_string(0)
-      else
-        fail ArgumentError, "#{string.class} is not a String", caller
-      end
-    end
-
-    def get_int(int)
-      if int.is_a?(Fixnum)
-        int
-      elsif int.respond_to?(:to_int)
-        int.to_int
-      else
-        fail ArgumentError, "#{int.class} is not a Integer", caller
-      end
-    end
-
     def get_size(data)
-      if data.is_a?(String) ||data.respond_to?(:bytesize)
-        data.bytesize
-      elsif data.is_a?(FFI::Pointer) ||data.respond_to?(:size)
+      case data
+      when FFI::Pointer, SecretBuffer
         data.size
-      elsif data.nil?
+      when String
+        data.bytesize
+      when NilClass
         0
       else
-        fail ArgumentError, "#{data.class} doesn't respond to :bytesize or :size", caller
+        fail TypeError, "#{data.class} must be of type FFI::Pointer, Sodium::SecretBufffer, String or NilClass", caller
+      end
+    end
+
+    def check_length(data, length, description)
+      case data
+      when FFI::Pointer, SecretBuffer
+        if data.size == length
+          true
+        else
+          fail LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.size} bytes", caller
+        end
+      when String
+        if data.bytesize == length
+          true
+        else
+          fail LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.bytesize} bytes", caller
+        end
+      else
+        fail TypeError, "#{data.class} must be of type FFI::Pointer, Sodium::SecretBufffer or String", caller
       end
     end
 
@@ -82,4 +55,6 @@ module Sodium
       [hex].pack(HEXY)
     end
   end
+
+  Utils.freeze
 end

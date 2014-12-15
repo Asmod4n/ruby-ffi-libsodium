@@ -27,7 +27,6 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       mac = Sodium::Buffer.new(:uchar, BYTES)
-      mac.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_auth(mac, message, get_size(message), key)
 
@@ -41,11 +40,13 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_auth_verify(mac, message, get_size(message), key).zero?
+      crypto_auth_verify(mac, message, get_size(message), key) == 0
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
   end
+
+  Auth.freeze
 
   module_function
 

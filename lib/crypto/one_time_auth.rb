@@ -36,7 +36,6 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       out = Sodium::Buffer.new(:uchar, BYTES)
-      out.primitive = PRIMITIVE
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_onetimeauth(out, message, get_size(message), key)
 
@@ -50,7 +49,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_onetimeauth_verify(out, message, get_size(message), key).zero?
+      crypto_onetimeauth_verify(out, message, get_size(message), key) == 0
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -73,12 +72,12 @@ module Crypto
 
     def final(state)
       out = Sodium::Buffer.new(:uchar, BYTES)
-      out.primitive = PRIMITIVE
       crypto_onetimeauth_final(state, out)
-
       out
     end
   end
+
+  OneTimeAuth.freeze
 
   module_function
 

@@ -54,5 +54,7 @@ module Crypto
         secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
       end
     end
+
+    Ed25519.freeze
   end
 end

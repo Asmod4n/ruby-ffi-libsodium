@@ -20,3 +20,5 @@ module RandomBytes
     buf
   end
 end
+
+RandomBytes.freeze

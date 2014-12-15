@@ -1,5 +1,5 @@
 ﻿module Sodium
-  class CryptoError < StandardError; end
-  class LengthError < ArgumentError; end
-  class MemoryError < StandardError; end
+  CryptoError = Class.new(StandardError).freeze
+  LengthError = Class.new(ArgumentError).freeze
+  MemoryError = Class.new(StandardError).freeze
 end

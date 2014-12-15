@@ -49,46 +49,33 @@ module Crypto
       end
 
       def scryptsalsa208sha256(outlen, passwd, salt, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        out = nil
         check_length(salt, SALTBYTES, :Salt)
-        if opslimit < OPSLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}", caller
-        end
-        if memlimit < MEMLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}", caller
-        end
 
-        out = Sodium::SecretBuffer.new(outlen, PRIMITIVE)
-        unless crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, get_size(passwd), salt, opslimit, memlimit).zero?
+        out = Sodium::SecretBuffer.new(outlen)
+        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, get_size(passwd), salt, opslimit, memlimit) == 0
+          out.noaccess
+          out
+        else
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
-
-        out
-      ensure
-        out.noaccess if out
       end
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        if opslimit < OPSLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Opslimit must be at least #{OPSLIMIT_INTERACTIVE}, got #{opslimit}", caller
-        end
-        if memlimit < MEMLIMIT_INTERACTIVE
-          fail Sodium::LengthError, "Memlimit must be at least #{MEMLIMIT_INTERACTIVE}, got #{memlimit}", caller
-        end
-
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        unless crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, get_size(passwd), opslimit, memlimit).zero?
+        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, get_size(passwd), opslimit, memlimit) == 0
+          hashed_password.get_string(0)
+        else
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
-
-        hashed_password.get_string(0)
       end
 
       def str_verify(str, passwd)
         check_length(str, STRBYTES - 1, :Str)
-        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, get_size(passwd)).zero?
+        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, get_size(passwd)) == 0
       end
     end
+
+    ScryptSalsa208SHA256.freeze
 
     module_function
 
@@ -96,4 +83,6 @@ module Crypto
       ScryptSalsa208SHA256.scryptsalsa208sha256(*args)
     end
   end
+
+  PwHash.freeze
 end
