@@ -1,4 +1,5 @@
-﻿require_relative 'errors'
+﻿require_relative 'core_ext'
+require_relative 'errors'
 
 module Sodium
   module Utils
@@ -8,8 +9,6 @@ module Sodium
     def get_size(data)
       if data.respond_to?(:bytesize)
         data.bytesize
-      elsif data.nil?
-        0
       else
         data.size
       end

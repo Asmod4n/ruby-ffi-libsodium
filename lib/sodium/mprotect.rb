@@ -1,6 +1,5 @@
 ﻿require 'ffi'
 require_relative 'errors'
-require_relative 'utils'
 
 module Sodium
   module Mprotect
