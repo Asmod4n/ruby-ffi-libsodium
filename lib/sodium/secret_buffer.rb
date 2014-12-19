@@ -13,11 +13,11 @@ module Sodium
     def initialize(size)
       @size = Integer(size)
       @to_ptr = Sodium.malloc(@size)
-      setup_finalizer
+      ObjectSpace.define_finalizer(@to_ptr, self.class.free(@to_ptr.address))
     end
 
     def free
-      remove_finalizer
+      ObjectSpace.undefine_finalizer @to_ptr
       Sodium::Mprotect.readonly(@to_ptr)
       Sodium.free(@to_ptr)
       remove_instance_variable(:@size)
@@ -38,14 +38,6 @@ module Sodium
     end
 
     private
-
-    def setup_finalizer
-      ObjectSpace.define_finalizer(@to_ptr, self.class.free(@to_ptr.address))
-    end
-
-    def remove_finalizer
-      ObjectSpace.undefine_finalizer @to_ptr
-    end
 
     def self.free(address)
       ->(obj_id) do
