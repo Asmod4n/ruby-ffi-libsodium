@@ -17,9 +17,9 @@ module Sodium
     end
 
     def free
-      ObjectSpace.undefine_finalizer @to_ptr
       Sodium::Mprotect.readonly(@to_ptr)
       Sodium.free(@to_ptr)
+      ObjectSpace.undefine_finalizer @to_ptr
       remove_instance_variable(:@size)
       remove_instance_variable(:@to_ptr)
       true

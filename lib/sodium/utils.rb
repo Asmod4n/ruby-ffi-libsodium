@@ -16,13 +16,13 @@ module Sodium
 
     def check_length(data, length, description)
       if data.respond_to?(:bytesize)
-        data.bytesize == length || fail(LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.bytesize} bytes", caller)
+        data.bytesize == length || fail(LengthError, "Expected a length=#{length} bytes #{description}, got bytesize=#{data.bytesize} bytes", caller)
       else
         data.size == length || fail(LengthError, "Expected a length=#{length} bytes #{description}, got size=#{data.size} bytes", caller)
       end
     end
 
-    ZERO = "\0".force_encoding(Encoding::ASCII_8BIT).freeze
+    ZERO = "\0".encode(Encoding::ASCII_8BIT).freeze
 
     def zeros(n)
       ZERO * n
