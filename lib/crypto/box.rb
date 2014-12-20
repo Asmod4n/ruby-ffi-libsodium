@@ -133,7 +133,7 @@ module Crypto
     def open_easy_in_place(data, nonce, public_key, secret_key, encoding = nil)
       ciphertext = String(data)
       ciphertext_len = ciphertext.bytesize
-      if (message_len = ciphertext_len - MACBYTES) > 0
+      if (message_len = ciphertext_len - MACBYTES) >= 0
         check_length(nonce, NONCEBYTES, :Nonce)
         check_length(public_key, PUBLICKEYBYTES, :PublicKey)
         check_length(secret_key, SECRETKEYBYTES, :SecretKey)

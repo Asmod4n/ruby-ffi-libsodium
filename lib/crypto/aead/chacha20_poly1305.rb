@@ -56,7 +56,7 @@ module Crypto
 
       def decrypt(ciphertext, additional_data, nonce, key)
         ciphertext_len = get_size(ciphertext)
-        if (decrypted_len = ciphertext_len - ABYTES) > 0
+        if (decrypted_len = ciphertext_len - ABYTES) >= 0
           check_length(nonce, NPUBBYTES, :Nonce)
           check_length(key, KEYBYTES, :SecretKey)
 
