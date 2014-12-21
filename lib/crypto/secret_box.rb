@@ -61,7 +61,7 @@ module Crypto
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
-    def easy_in_place(data, nonce, key)
+    def secretbox!(data, nonce, key)
       message = String(data)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
@@ -76,7 +76,7 @@ module Crypto
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
-    def open_easy_in_place(data, nonce, key, encoding = nil)
+    def open!(data, nonce, key, encoding = nil)
       ciphertext = String(data)
       ciphertext_len = ciphertext.bytesize
       if (message_len = ciphertext_len - MACBYTES) >= 0
@@ -109,5 +109,9 @@ module Crypto
 
   def secretbox(*args)
     SecretBox.secretbox(*args)
+  end
+
+  def secretbox!(*args)
+    SecretBox.secretbox!(*args)
   end
 end

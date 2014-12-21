@@ -72,7 +72,7 @@ module Sodium
     end
   end
 
-  def hex2bin_in_place(hex, bin_maxlen, ignore = nil)
+  def hex2bin!(hex, bin_maxlen, ignore = nil)
     bin_len = FFI::MemoryPointer.new(:size_t)
     if sodium_hex2bin(hex, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == 0
       size = bin_len.size == 8 ? bin_len.read_uint64 : bin_len.read_uint32

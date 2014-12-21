@@ -114,7 +114,7 @@ module Crypto
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
-    def easy_in_place(data, nonce, public_key, secret_key)
+    def box!(data, nonce, public_key, secret_key)
       message = String(data)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
@@ -130,7 +130,7 @@ module Crypto
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
-    def open_easy_in_place(data, nonce, public_key, secret_key, encoding = nil)
+    def open!(data, nonce, public_key, secret_key, encoding = nil)
       ciphertext = String(data)
       ciphertext_len = ciphertext.bytesize
       if (message_len = ciphertext_len - MACBYTES) >= 0
@@ -164,5 +164,9 @@ module Crypto
 
   def box(*args)
     Box.box(*args)
+  end
+
+  def box!(*args)
+    Box.box!(*args)
   end
 end
