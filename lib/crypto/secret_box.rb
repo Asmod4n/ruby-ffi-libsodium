@@ -71,7 +71,7 @@ module Crypto
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(message, message, message_len, nonce, key)
 
-      message
+      message.force_encoding(Encoding::ASCII_8BIT)
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -85,13 +85,12 @@ module Crypto
 
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         if crypto_secretbox_open_easy(ciphertext, ciphertext, ciphertext_len, nonce, key) == 0
+          ciphertext.slice!(message_len..-1)
           if encoding
-            ciphertext.slice!(message_len..-1).force_encoding(encoding)
+            ciphertext.force_encoding(encoding)
           else
-            ciphertext.slice!(message_len..-1)
+            ciphertext
           end
-
-          ciphertext
         else
           raise Sodium::CryptoError, "Message forged", caller
         end
