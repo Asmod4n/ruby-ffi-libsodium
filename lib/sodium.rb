@@ -24,19 +24,35 @@ module Sodium
   module_function
 
   def mlock(addr, len)
-    sodium_mlock(addr, len) == 0 || raise(MemoryError, "Could not lock length=#{len} bytes memory at address=#{addr.address}", caller)
+    if sodium_mlock(addr, len) == 0
+      true
+    else
+      raise MemoryError, "Could not lock length=#{len} bytes memory at address=#{addr.address}", caller
+    end
   end
 
   def munlock(addr, len)
-    sodium_munlock(addr, len) == 0 || raise(MemoryError, "Could not unlock length=#{len} bytes memory at address=#{addr.address}", caller)
+    if sodium_munlock(addr, len) == 0
+      true
+    else
+      raise MemoryError, "Could not unlock length=#{len} bytes memory at address=#{addr.address}", caller
+    end
   end
 
   def malloc(size)
-    sodium_malloc(size) || raise(NoMemoryError, "Failed to allocate memory size=#{size} bytes", caller)
+    unless (mem = sodium_malloc(size)).null?
+      mem
+    else
+      raise NoMemoryError, "Failed to allocate memory size=#{size} bytes", caller
+    end
   end
 
   def allocarray(count, size)
-    sodium_allocarray(count, size) || raise(NoMemoryError, "Failed to allocate memory size=#{count * size} bytes", caller)
+    unless (mem = sodium_allocarray(count, size)).null?
+      mem
+    else
+      raise NoMemoryError, "Failed to allocate memory size=#{count * size} bytes", caller
+    end
   end
 
   def bin2hex(bin)
@@ -45,15 +61,12 @@ module Sodium
     sodium_bin2hex(hex, hex.size, bin, bin_len)
   end
 
-  def hex2bin(hex, ignore = nil)
-    if ignore
-      bin_maxlen = hex.tr(ignore, '').bytesize / 2
-    else
-      bin_maxlen = hex.bytesize / 2
-    end
-
+  def hex2bin(hex, bin_maxlen, ignore = nil)
     bin = Sodium::Buffer.new(:uchar, bin_maxlen)
-    sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, nil, nil)
-    bin
+    if sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, nil, nil) == 0
+      bin
+    else
+      raise LengthError, "bin_maxlen=#{bin_maxlen} is too short", caller
+    end
   end
 end
