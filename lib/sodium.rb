@@ -63,8 +63,10 @@ module Sodium
 
   def hex2bin(hex, bin_maxlen, ignore = nil)
     bin = Sodium::Buffer.new(:uchar, bin_maxlen)
-    if sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, nil, nil) == 0
-      bin
+    bin_len = FFI::MemoryPointer.new(:size_t)
+    if sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == 0
+      size = bin_len.size == 8 ? bin_len.read_ulong : bin_len.read_uint
+      [bin, size]
     else
       raise LengthError, "bin_maxlen=#{bin_maxlen} is too short", caller
     end
