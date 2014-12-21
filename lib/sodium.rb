@@ -19,7 +19,7 @@ module Sodium
   attach_function :sodium_allocarray,         [:size_t, :size_t],   :pointer
 
   attach_function :sodium_bin2hex,  [:buffer_out, :size_t, :buffer_in, :size_t],  :string
-  attach_function :sodium_hex2bin,  [:buffer_out, :size_t, :buffer_in, :size_t, :string, :pointer, :pointer],  :int
+  attach_function :sodium_hex2bin,  [:buffer_out, :size_t, :string, :size_t, :string, :buffer_out, :pointer],  :int
 
   module_function
 

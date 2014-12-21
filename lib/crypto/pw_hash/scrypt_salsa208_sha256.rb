@@ -38,9 +38,9 @@ module Crypto
       OPSLIMIT_SENSITIVE    = opslimit_sensitive.freeze
       MEMLIMIT_SENSITIVE    = memlimit_sensitive.freeze
 
-      attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :buffer_in, :ulong_long, :buffer_in, :ulong_long, :size_t],  :int
-      attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :buffer_in, :ulong_long, :ulong_long, :size_t],                           :int
-      attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:string, :buffer_in, :ulong_long],                                                     :int
+      attach_function :crypto_pwhash_scryptsalsa208sha256,            [:buffer_out, :ulong_long, :string, :ulong_long, :buffer_in, :ulong_long, :size_t], :int
+      attach_function :crypto_pwhash_scryptsalsa208sha256_str,        [:buffer_out, :string, :ulong_long, :ulong_long, :size_t],                          :int
+      attach_function :crypto_pwhash_scryptsalsa208sha256_str_verify, [:string, :string, :ulong_long],                                                    :int
 
       module_function
 
@@ -52,7 +52,7 @@ module Crypto
         check_length(salt, SALTBYTES, :Salt)
 
         out = Sodium::SecretBuffer.new(outlen)
-        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, get_size(passwd), salt, opslimit, memlimit) == 0
+        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == 0
           out.noaccess
           out
         else
@@ -62,7 +62,7 @@ module Crypto
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
-        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, get_size(passwd), opslimit, memlimit) == 0
+        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == 0
           hashed_password.get_string(0)
         else
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
@@ -71,7 +71,7 @@ module Crypto
 
       def str_verify(str, passwd)
         check_length(str, STRBYTES - 1, :Str)
-        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, get_size(passwd)) == 0
+        crypto_pwhash_scryptsalsa208sha256_str_verify(str, passwd, passwd.bytesize) == 0
       end
     end
 
