@@ -53,7 +53,7 @@ module Crypto
         key.noaccess if key.is_a?(Sodium::SecretBuffer)
       end
 
-      def decrypt(ciphertext, additional_data, nonce, key)
+      def decrypt(ciphertext, additional_data, nonce, key, encoding = nil)
         ciphertext_len = get_size(ciphertext)
         if (decrypted_len = ciphertext_len - ABYTES) >= 0
           check_length(nonce, NPUBBYTES, :Nonce)
@@ -62,7 +62,11 @@ module Crypto
           decrypted = zeros(decrypted_len)
           key.readonly if key.is_a?(Sodium::SecretBuffer)
           if crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, get_size(additional_data), nonce, key) == 0
-            decrypted
+            if encoding
+              decrypted.force_encoding(encoding)
+            else
+              decrypted
+            end
           else
             raise Sodium::CryptoError, "Message forged", caller
           end

@@ -96,7 +96,7 @@ module Crypto
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
-    def open(ciphertext, nonce, public_key, secret_key)
+    def open(ciphertext, nonce, public_key, secret_key, encoding = nil)
       ciphertext_len = get_size(ciphertext)
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
@@ -105,7 +105,11 @@ module Crypto
       decrypted = zeros(ciphertext_len - MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       if crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key) == 0
-        decrypted
+        if encoding
+          decrypted.force_encoding(encoding)
+        else
+          decrypted
+        end
       else
         raise Sodium::CryptoError, "Message forged", caller
       end
