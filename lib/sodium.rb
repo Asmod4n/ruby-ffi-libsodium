@@ -56,7 +56,7 @@ module Sodium
 
   def bin2hex(bin)
     bin_len = get_size(bin)
-    hex = zeros(bin_len * 2)
+    hex = zeros(bin_len * 2 + 1)
     sodium_bin2hex(hex, hex.bytesize, bin, bin_len)
   end
 
