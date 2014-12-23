@@ -1,7 +1,6 @@
 ﻿require 'ffi'
 require_relative 'sodium/errors'
 require_relative 'sodium/utils'
-require_relative 'sodium/buffer'
 
 module Sodium
   extend FFI::Library
@@ -57,12 +56,12 @@ module Sodium
 
   def bin2hex(bin)
     bin_len = get_size(bin)
-    hex = FFI::MemoryPointer.new(:char, bin_len * 2 + 1)
-    sodium_bin2hex(hex, hex.size, bin, bin_len)
+    hex = zeros(bin_len * 2)
+    sodium_bin2hex(hex, hex.bytesize, bin, bin_len)
   end
 
   def hex2bin(hex, bin_maxlen, ignore = nil)
-    bin = Sodium::Buffer.new(:uchar, bin_maxlen)
+    bin = zeros(bin_maxlen)
     bin_len = FFI::MemoryPointer.new(:size_t)
     if sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == 0
       size = bin_len.size == 8 ? bin_len.get_uint64(0) : bin_len.get_uint32(0)

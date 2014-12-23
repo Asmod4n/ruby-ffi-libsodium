@@ -1,7 +1,6 @@
 ﻿require 'ffi'
 require_relative '../../sodium/utils'
 require_relative '../scalar_mult'
-require_relative '../../sodium/buffer'
 require_relative '../../sodium/secret_buffer'
 
 module Crypto
@@ -35,7 +34,7 @@ module Crypto
       def pk_to_curve25519(public_key)
         check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
-        curve25519_pk = Sodium::Buffer.new(:uchar, ScalarMult::BYTES)
+        curve25519_pk = zeros(ScalarMult::BYTES)
         crypto_sign_ed25519_pk_to_curve25519(curve25519_pk, public_key)
 
         curve25519_pk

@@ -1,6 +1,5 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 
 module Crypto
@@ -26,7 +25,7 @@ module Crypto
     def base(secret_key)
       check_length(secret_key, SCALARBYTES, :SecretKey)
 
-      public_key = Sodium::Buffer.new(:uchar, BYTES)
+      public_key = zeros(BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_scalarmult_base(public_key, secret_key)
 

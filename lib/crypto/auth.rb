@@ -1,6 +1,5 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 
 module Crypto
@@ -26,7 +25,7 @@ module Crypto
     def auth(message, key)
       check_length(key, KEYBYTES, :SecretKey)
 
-      mac = Sodium::Buffer.new(:uchar, BYTES)
+      mac = zeros(BYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_auth(mac, message, get_size(message), key)
 

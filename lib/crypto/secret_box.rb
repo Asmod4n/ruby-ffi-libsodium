@@ -1,7 +1,6 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
 require_relative '../random_bytes'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 require_relative '../sodium'
 
@@ -36,7 +35,7 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
+      ciphertext = zeros(message_len + MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_secretbox_easy(ciphertext, message, message_len, nonce, key)
 
@@ -50,7 +49,7 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
+      decrypted = zeros(ciphertext_len - MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       if crypto_secretbox_open_easy(decrypted, ciphertext, ciphertext_len, nonce, key) == 0
         decrypted

@@ -1,6 +1,5 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 require_relative '../sodium'
 
@@ -32,8 +31,8 @@ module Crypto
     module_function
 
     def keypair
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
+      secret_key = zeros(SECRETKEYBYTES)
       crypto_sign_keypair(public_key, secret_key)
 
       [public_key, secret_key]
@@ -42,8 +41,8 @@ module Crypto
     def seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
+      secret_key = zeros(SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
 
@@ -53,7 +52,7 @@ module Crypto
     end
 
     def memory_locked_keypair
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
       secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       crypto_sign_keypair(public_key, secret_key)
       secret_key.noaccess
@@ -64,7 +63,7 @@ module Crypto
     def memory_locked_seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
       secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_sign_seed_keypair(public_key, secret_key, seed)
@@ -79,7 +78,7 @@ module Crypto
       message_len = get_size(message)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      sealed_message = Sodium::Buffer.new(:uchar, message_len + BYTES)
+      sealed_message = zeros(message_len + BYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_sign(sealed_message, nil, message, message_len, secret_key)
 
@@ -92,7 +91,7 @@ module Crypto
       sealed_message_len = get_size(sealed_message)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
-      unsealed_message = Sodium::Buffer.new(:uchar, sealed_message_len - BYTES)
+      unsealed_message = zeros(sealed_message_len - BYTES)
       unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
       if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == 0
         unsealed_message

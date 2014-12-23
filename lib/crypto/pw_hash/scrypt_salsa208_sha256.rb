@@ -61,9 +61,9 @@ module Crypto
       end
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        hashed_password = FFI::MemoryPointer.new(:char, STRBYTES)
+        hashed_password = zeros(STRBYTES - 1)
         if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == 0
-          hashed_password.get_string(0)
+          hashed_password
         else
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end

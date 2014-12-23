@@ -1,6 +1,5 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 
 module Crypto
@@ -35,7 +34,7 @@ module Crypto
     def onetimeauth(message, key)
       check_length(key, KEYBYTES, :SecretKey)
 
-      out = Sodium::Buffer.new(:uchar, BYTES)
+      out = zeros(BYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_onetimeauth(out, message, get_size(message), key)
 
@@ -71,7 +70,7 @@ module Crypto
     end
 
     def final(state)
-      out = Sodium::Buffer.new(:uchar, BYTES)
+      out = zeros(BYTES)
       crypto_onetimeauth_final(state, out)
       out
     end

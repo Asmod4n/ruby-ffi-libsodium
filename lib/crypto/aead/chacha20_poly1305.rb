@@ -1,7 +1,6 @@
 ﻿require 'ffi'
 require_relative '../../sodium/utils'
 require_relative '../../random_bytes'
-require_relative '../../sodium/buffer'
 require_relative '../../sodium/secret_buffer'
 require_relative '../../sodium/errors'
 
@@ -45,7 +44,7 @@ module Crypto
         check_length(nonce, NPUBBYTES, :Nonce)
         check_length(key, KEYBYTES, :SecretKey)
 
-        ciphertext = Sodium::Buffer.new(:uchar, message_len + ABYTES)
+        ciphertext = zeros(message_len + ABYTES)
         key.readonly if key.is_a?(Sodium::SecretBuffer)
         crypto_aead_chacha20poly1305_encrypt(ciphertext, nil, message, message_len, additional_data, get_size(additional_data), nil, nonce, key)
 
@@ -60,7 +59,7 @@ module Crypto
           check_length(nonce, NPUBBYTES, :Nonce)
           check_length(key, KEYBYTES, :SecretKey)
 
-          decrypted = Sodium::Buffer.new(:uchar, decrypted_len)
+          decrypted = zeros(decrypted_len)
           key.readonly if key.is_a?(Sodium::SecretBuffer)
           if crypto_aead_chacha20poly1305_decrypt(decrypted, nil, nil, ciphertext, ciphertext_len, additional_data, get_size(additional_data), nonce, key) == 0
             decrypted

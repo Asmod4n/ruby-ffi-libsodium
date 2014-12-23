@@ -1,6 +1,5 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 
 module Crypto
@@ -25,7 +24,7 @@ module Crypto
     def shorthash(short_data, key)
       check_length(key, KEYBYTES, :SecretKey)
 
-      siphash = Sodium::Buffer.new(:uchar, BYTES)
+      siphash = zeros(BYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
       crypto_shorthash(siphash, short_data, get_size(short_data), key)
 

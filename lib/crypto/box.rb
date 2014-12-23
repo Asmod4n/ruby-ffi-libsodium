@@ -1,7 +1,6 @@
 ﻿require 'ffi'
 require_relative '../sodium/utils'
 require_relative '../random_bytes'
-require_relative '../sodium/buffer'
 require_relative '../sodium/secret_buffer'
 require_relative '../sodium/errors'
 
@@ -39,8 +38,8 @@ module Crypto
     end
 
     def keypair
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
+      secret_key = zeros(SECRETKEYBYTES)
       crypto_box_keypair(public_key, secret_key)
 
       [public_key, secret_key]
@@ -49,8 +48,8 @@ module Crypto
     def seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
-      secret_key = Sodium::Buffer.new(:uchar, SECRETKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
+      secret_key = zeros(SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
 
@@ -60,7 +59,7 @@ module Crypto
     end
 
     def memory_locked_keypair
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
       secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       crypto_box_keypair(public_key, secret_key)
       secret_key.noaccess
@@ -71,7 +70,7 @@ module Crypto
     def memory_locked_seed_keypair(seed)
       check_length(seed, SEEDBYTES, :Seed)
 
-      public_key = Sodium::Buffer.new(:uchar, PUBLICKEYBYTES)
+      public_key = zeros(PUBLICKEYBYTES)
       secret_key = Sodium::SecretBuffer.new(SECRETKEYBYTES)
       seed.readonly if seed.is_a?(Sodium::SecretBuffer)
       crypto_box_seed_keypair(public_key, secret_key, seed)
@@ -88,7 +87,7 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      ciphertext = Sodium::Buffer.new(:uchar, message_len + MACBYTES)
+      ciphertext = zeros(message_len + MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       crypto_box_easy(ciphertext, message, message_len, nonce, public_key, secret_key)
 
@@ -103,7 +102,7 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      decrypted = Sodium::Buffer.new(:uchar, ciphertext_len - MACBYTES)
+      decrypted = zeros(ciphertext_len - MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
       if crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key) == 0
         decrypted

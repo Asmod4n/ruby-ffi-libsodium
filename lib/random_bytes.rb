@@ -1,8 +1,9 @@
 ﻿require 'ffi'
-require_relative 'sodium/buffer'
+require_relative 'sodium/utils'
 
 module RandomBytes
   extend FFI::Library
+  extend Sodium::Utils
   ffi_lib :libsodium
 
   attach_function :randombytes_buf, [:buffer_out, :size_t], :void
@@ -15,7 +16,7 @@ module RandomBytes
   module_function
 
   def buf(size)
-    buf = Sodium::Buffer.new(:void, size)
+    buf = zeros(size)
     randombytes_buf(buf, size)
     buf
   end
