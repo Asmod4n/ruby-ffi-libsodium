@@ -22,7 +22,7 @@ module Sodium
       end
     end
 
-    ZERO = "\0".encode(Encoding::ASCII_8BIT).freeze
+    ZERO = "\0".force_encoding(Encoding::ASCII_8BIT).freeze
 
     def zeros(n)
       ZERO * n
