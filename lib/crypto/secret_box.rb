@@ -24,6 +24,9 @@ module Crypto
     attach_function :crypto_secretbox_easy,       [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
     attach_function :crypto_secretbox_open_easy,  [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
 
+    attach_function :crypto_secretbox_detached,       [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
+    attach_function :crypto_secretbox_open_detached,  [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in], :int
+
     module_function
 
     def nonce
@@ -99,6 +102,72 @@ module Crypto
         end
       else
         fail Sodium::LengthError, "Ciphertext is too short", caller
+      end
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
+    end
+
+    def detached(message, nonce, key)
+      message_len = get_size(message)
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(key, KEYBYTES, :SecretKey)
+
+      ciphertext = zeros(message_len)
+      mac = zeros(MACBYTES)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
+      crypto_secretbox_easy(ciphertext, mac, message, message_len, nonce, key)
+
+      [ciphertext, mac]
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
+    end
+
+    def open_detached(ciphertext, mac, nonce, key, encoding = nil)
+      ciphertext_len = get_size(ciphertext)
+      check_length(mac, MACBYTES, :Mac)
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(key, KEYBYTES, :SecretKey)
+
+      decrypted = zeros(ciphertext_len)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
+      if crypto_secretbox_open_easy(decrypted, ciphertext, mac, ciphertext_len, nonce, key) == 0
+        if encoding
+          decrypted.force_encoding(encoding)
+        end
+        decrypted
+      else
+        raise Sodium::CryptoError, "Message forged", caller
+      end
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
+    end
+
+    def detached!(message, nonce, key)
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(key, KEYBYTES, :SecretKey)
+
+      mac = zeros(MACBYTES)
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
+      crypto_secretbox_easy(message, message, mac, get_size(message), nonce, key)
+
+      [message, mac]
+    ensure
+      key.noaccess if key.is_a?(Sodium::SecretBuffer)
+    end
+
+    def open_detached!(ciphertext, mac, nonce, key, encoding = nil)
+      check_length(mac, MACBYTES, :Mac)
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(key, KEYBYTES, :SecretKey)
+
+      key.readonly if key.is_a?(Sodium::SecretBuffer)
+      if crypto_secretbox_open_easy(ciphertext, ciphertext, mac, get_size(ciphertext), nonce, key) == 0
+        if encoding && ciphertext.respond_to?(:force_encoding)
+          ciphertext.force_encoding(encoding)
+        end
+        ciphertext
+      else
+        raise Sodium::CryptoError, "Message forged", caller
       end
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)

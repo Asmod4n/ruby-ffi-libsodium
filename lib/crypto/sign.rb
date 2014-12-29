@@ -28,6 +28,9 @@ module Crypto
     attach_function :crypto_sign,       [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int
     attach_function :crypto_sign_open,  [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in],  :int
 
+    attach_function :crypto_sign_detached,        [:buffer_out, :pointer, :buffer_in, :ulong_long, :buffer_in], :int
+    attach_function :crypto_sign_verify_detached, [:buffer_in, :buffer_in, :ulong_long, :buffer_in],            :int
+
     module_function
 
     def keypair
@@ -98,6 +101,24 @@ module Crypto
       else
         raise Sodium::CryptoError, "Incorrect signature", caller
       end
+    end
+
+    def detached(message, secret_key)
+      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
+
+      signature = zeros(BYTES)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
+      crypto_sign_detached(signature, nil, message, get_size(message), secret_key)
+
+      signature
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
+    end
+
+    def verify_detached(signature, message, public_key)
+      check_length(signature, BYTES, :Signature)
+
+      crypto_sign_verify_detached(signature, message, get_size(message), public_key) == 0
     end
   end
 
