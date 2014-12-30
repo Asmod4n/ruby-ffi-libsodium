@@ -34,21 +34,21 @@ module Crypto
     def onetimeauth(message, key)
       check_length(key, KEYBYTES, :SecretKey)
 
-      out = zeros(BYTES)
+      mac = zeros(BYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_onetimeauth(out, message, get_size(message), key)
+      crypto_onetimeauth(mac, message, get_size(message), key)
 
-      out
+      mac
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
 
-    def verify(out, message, key)
-      check_length(out, BYTES, :Authenticator)
+    def verify(mac, message, key)
+      check_length(mac, BYTES, :Mac)
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_onetimeauth_verify(out, message, get_size(message), key) == 0
+      crypto_onetimeauth_verify(mac, message, get_size(message), key) == 0
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -70,9 +70,9 @@ module Crypto
     end
 
     def final(state)
-      out = zeros(BYTES)
-      crypto_onetimeauth_final(state, out)
-      out
+      mac = zeros(BYTES)
+      crypto_onetimeauth_final(state, mac)
+      mac
     end
   end
 

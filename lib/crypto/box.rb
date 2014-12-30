@@ -17,6 +17,7 @@ module Crypto
     attach_function :secretkeybytes,  :crypto_box_secretkeybytes, [], :size_t
     attach_function :noncebytes,      :crypto_box_noncebytes,     [], :size_t
     attach_function :macbytes,        :crypto_box_macbytes,       [], :size_t
+    attach_function :beforenmbytes,   :crypto_box_beforenmbytes,  [], :size_t
 
     PRIMITIVE       = primitive.freeze
     SEEDBYTES       = seedbytes.freeze
@@ -24,6 +25,7 @@ module Crypto
     SECRETKEYBYTES  = secretkeybytes.freeze
     NONCEBYTES      = noncebytes.freeze
     MACBYTES        = macbytes.freeze
+    BEFORENMBYTES   = beforenmbytes.freeze
 
     attach_function :crypto_box_keypair,        [:buffer_out, :buffer_out],             :int
     attach_function :crypto_box_seed_keypair,   [:buffer_out, :buffer_out, :buffer_in], :int
@@ -33,6 +35,8 @@ module Crypto
 
     attach_function :crypto_box_detached,       [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in],  :int
     attach_function :crypto_box_open_detached,  [:buffer_out, :buffer_in, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in],   :int
+
+    attach_function :crypto_box_beforenm,       [:buffer_out, :buffer_in, :buffer_in],  :int
 
     module_function
 
@@ -82,6 +86,20 @@ module Crypto
       [public_key, secret_key]
     ensure
       seed.noaccess if seed.is_a?(Sodium::SecretBuffer)
+    end
+
+    def beforenm(public_key, secret_key)
+      check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
+
+      shared_secret = Sodium::SecretBuffer.new(BEFORENMBYTES)
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
+      crypto_box_beforenm(shared_secret, public_key, secret_key)
+      shared_secret.noaccess
+
+      shared_secret
+    ensure
+      secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
     def box(message, nonce, public_key, secret_key)
@@ -151,8 +169,8 @@ module Crypto
       if crypto_box_open_easy(ciphertext, ciphertext, ciphertext_len, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
-
       ciphertext.slice!(message_len..-1)
+
       if encoding
         ciphertext.force_encoding(encoding)
       end
