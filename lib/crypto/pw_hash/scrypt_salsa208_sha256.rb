@@ -61,12 +61,12 @@ module Crypto
       end
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
-        hashed_password = zeros(STRBYTES - 1)
+        hashed_password = zeros(STRBYTES)
         if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
 
-        hashed_password
+        hashed_password.chop!
       end
 
       def str_verify(str, passwd)
