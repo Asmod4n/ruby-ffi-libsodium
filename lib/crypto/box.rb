@@ -107,15 +107,15 @@ module Crypto
 
       decrypted = zeros(ciphertext_len - MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      if crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key) == 0
-        if encoding
-          decrypted.force_encoding(encoding)
-        else
-          decrypted
-        end
-      else
+      if crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
+
+      if encoding
+        decrypted.force_encoding(encoding)
+      end
+
+      decrypted
     ensure
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
@@ -139,25 +139,25 @@ module Crypto
     def open!(data, nonce, public_key, secret_key, encoding = nil)
       ciphertext = String(data)
       ciphertext_len = ciphertext.bytesize
-      if (message_len = ciphertext_len - MACBYTES) >= 0
-        check_length(nonce, NONCEBYTES, :Nonce)
-        check_length(public_key, PUBLICKEYBYTES, :PublicKey)
-        check_length(secret_key, SECRETKEYBYTES, :SecretKey)
-
-        secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-        if crypto_box_open_easy(ciphertext, ciphertext, ciphertext_len, nonce, public_key, secret_key) == 0
-          ciphertext.slice!(message_len..-1)
-          if encoding
-            ciphertext.force_encoding(encoding)
-          else
-            ciphertext
-          end
-        else
-          raise Sodium::CryptoError, "Message forged", caller
-        end
-      else
+      if (message_len = ciphertext_len - MACBYTES) < 0
         fail Sodium::LengthError, "Ciphertext is too short", caller
       end
+
+      check_length(nonce, NONCEBYTES, :Nonce)
+      check_length(public_key, PUBLICKEYBYTES, :PublicKey)
+      check_length(secret_key, SECRETKEYBYTES, :SecretKey)
+
+      secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
+      if crypto_box_open_easy(ciphertext, ciphertext, ciphertext_len, nonce, public_key, secret_key) == -1
+        raise Sodium::CryptoError, "Message forged", caller
+      end
+
+      ciphertext.slice!(message_len..-1)
+      if encoding
+        ciphertext.force_encoding(encoding)
+      end
+
+      ciphertext
     ensure
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
@@ -186,14 +186,15 @@ module Crypto
 
       decrypted = zeros(ciphertext_len)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      if crypto_box_open_detached(decrypted, ciphertext, mac, ciphertext_len, nonce, public_key, secret_key) == 0
-        if encoding
-          decrypted.force_encoding(encoding)
-        end
-        decrypted
-      else
+      if crypto_box_open_detached(decrypted, ciphertext, mac, ciphertext_len, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
+
+      if encoding
+        decrypted.force_encoding(encoding)
+      end
+
+      decrypted
     ensure
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
@@ -218,14 +219,15 @@ module Crypto
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      if crypto_box_open_detached(ciphertext, ciphertext, mac, get_size(ciphertext), nonce, public_key, secret_key) == 0
-        if encoding && ciphertext.respond_to?(:force_encoding)
-          ciphertext.force_encoding(encoding)
-        end
-        ciphertext
-      else
+      if crypto_box_open_detached(ciphertext, ciphertext, mac, get_size(ciphertext), nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
+
+      if encoding && ciphertext.respond_to?(:force_encoding)
+        ciphertext.force_encoding(encoding)
+      end
+
+      ciphertext
     ensure
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end

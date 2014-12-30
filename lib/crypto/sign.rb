@@ -96,11 +96,11 @@ module Crypto
 
       unsealed_message = zeros(sealed_message_len - BYTES)
       unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
-      if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == 0
-        unsealed_message
-      else
+      if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == -1
         raise Sodium::CryptoError, "Incorrect signature", caller
       end
+
+      unsealed_message
     end
 
     def detached(message, secret_key)

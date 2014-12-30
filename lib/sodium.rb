@@ -23,35 +23,35 @@ module Sodium
   module_function
 
   def mlock(addr, len)
-    if sodium_mlock(addr, len) == 0
-      true
-    else
+    if sodium_mlock(addr, len) == -1
       raise MemoryError, "Could not lock length=#{len} bytes memory at address=#{addr.address}", caller
     end
+
+    true
   end
 
   def munlock(addr, len)
-    if sodium_munlock(addr, len) == 0
-      true
-    else
+    if sodium_munlock(addr, len) == -1
       raise MemoryError, "Could not unlock length=#{len} bytes memory at address=#{addr.address}", caller
     end
+
+    true
   end
 
   def malloc(size)
-    unless (mem = sodium_malloc(size)).null?
-      mem
-    else
+    if (mem = sodium_malloc(size)).null?
       raise NoMemoryError, "Failed to allocate memory size=#{size} bytes", caller
     end
+
+    mem
   end
 
   def allocarray(count, size)
-    unless (mem = sodium_allocarray(count, size)).null?
-      mem
-    else
+    if (mem = sodium_allocarray(count, size)).null?
       raise NoMemoryError, "Failed to allocate memory size=#{count * size} bytes", caller
     end
+
+    mem
   end
 
   def bin2hex(bin)
@@ -63,22 +63,21 @@ module Sodium
   def hex2bin(hex, bin_maxlen, ignore = nil)
     bin = zeros(bin_maxlen)
     bin_len = FFI::MemoryPointer.new(:size_t)
-    if sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == 0
-      size = bin_len.size == 8 ? bin_len.get_uint64(0) : bin_len.get_uint32(0)
-      [bin, size]
-    else
+    if sodium_hex2bin(bin, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == -1
       raise LengthError, "bin_maxlen=#{bin_maxlen} is too short", caller
     end
+    size = bin_len.size == 8 ? bin_len.get_uint64(0) : bin_len.get_uint32(0)
+
+    [bin, size]
   end
 
   def hex2bin!(hex, bin_maxlen, ignore = nil)
     bin_len = FFI::MemoryPointer.new(:size_t)
-    if sodium_hex2bin(hex, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == 0
-      size = bin_len.size == 8 ? bin_len.get_uint64(0) : bin_len.get_uint32(0)
-      hex.slice!(size..-1)
-      hex
-    else
+    if sodium_hex2bin(hex, bin_maxlen, hex, hex.bytesize, ignore, bin_len, nil) == -1
       raise LengthError, "bin_maxlen=#{bin_maxlen} is too short", caller
     end
+    size = bin_len.size == 8 ? bin_len.get_uint64(0) : bin_len.get_uint32(0)
+    hex.slice!(size..-1)
+    hex
   end
 end

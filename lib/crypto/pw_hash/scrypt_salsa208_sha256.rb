@@ -52,21 +52,21 @@ module Crypto
         check_length(salt, SALTBYTES, :Salt)
 
         out = Sodium::SecretBuffer.new(outlen)
-        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == 0
-          out.noaccess
-          out
-        else
+        if crypto_pwhash_scryptsalsa208sha256(out, outlen, passwd, passwd.bytesize, salt, opslimit, memlimit) == -1
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
+
+        out.noaccess
+        out
       end
 
       def str(passwd, opslimit = OPSLIMIT_INTERACTIVE, memlimit = MEMLIMIT_INTERACTIVE)
         hashed_password = zeros(STRBYTES - 1)
-        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == 0
-          hashed_password
-        else
+        if crypto_pwhash_scryptsalsa208sha256_str(hashed_password, passwd, passwd.bytesize, opslimit, memlimit) == -1
           raise NoMemoryError, "Failed to allocate memory max size=#{memlimit} bytes", caller
         end
+
+        hashed_password
       end
 
       def str_verify(str, passwd)

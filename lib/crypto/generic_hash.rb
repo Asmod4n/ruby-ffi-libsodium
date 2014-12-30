@@ -53,11 +53,11 @@ module Crypto
 
       blake2b = zeros(hash_size)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      if crypto_generichash(blake2b, hash_size, message, get_size(message), key, key_len) == 0
-        blake2b
-      else
+      if crypto_generichash(blake2b, hash_size, message, get_size(message), key, key_len) == -1
         raise Sodium::CryptoError
       end
+
+      blake2b
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -71,11 +71,11 @@ module Crypto
 
       state = State.new
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      if crypto_generichash_init(state, key, key_len, hash_size) == 0
-        [state, zeros(hash_size)]
-      else
+      if crypto_generichash_init(state, key, key_len, hash_size) == -1
         raise Sodium::CryptoError
       end
+
+      [state, zeros(hash_size)]
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -85,11 +85,11 @@ module Crypto
     end
 
     def final(state, blake2b)
-      if crypto_generichash_final(state, blake2b, blake2b.bytesize) == 0
-        blake2b
-      else
+      if crypto_generichash_final(state, blake2b, blake2b.bytesize) == -1
         raise Sodium::CryptoError
       end
+
+      blake2b
     end
   end
 
