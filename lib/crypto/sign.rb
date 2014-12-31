@@ -90,7 +90,7 @@ module Crypto
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
 
-    def open(sealed_message, public_key)
+    def open(sealed_message, public_key, encoding = nil)
       sealed_message_len = get_size(sealed_message)
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
 
@@ -98,6 +98,10 @@ module Crypto
       unsealed_message_len = FFI::MemoryPointer.new(:ulong_long)
       if crypto_sign_open(unsealed_message, unsealed_message_len, sealed_message, sealed_message_len, public_key) == -1
         raise Sodium::CryptoError, "Incorrect signature", caller
+      end
+
+      if encoding
+        unsealed_message.force_encoding(encoding)
       end
 
       unsealed_message
