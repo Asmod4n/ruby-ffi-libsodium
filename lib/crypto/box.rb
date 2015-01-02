@@ -30,13 +30,13 @@ module Crypto
     attach_function :crypto_box_keypair,        [:buffer_out, :buffer_out],             :int
     attach_function :crypto_box_seed_keypair,   [:buffer_out, :buffer_out, :buffer_in], :int
 
+    attach_function :crypto_box_beforenm,       [:buffer_out, :buffer_in, :buffer_in],  :int
+
     attach_function :crypto_box_easy,           [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int
     attach_function :crypto_box_open_easy,      [:buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in], :int
 
     attach_function :crypto_box_detached,       [:buffer_out, :buffer_out, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in],  :int
     attach_function :crypto_box_open_detached,  [:buffer_out, :buffer_in, :buffer_in, :ulong_long, :buffer_in, :buffer_in, :buffer_in],   :int
-
-    attach_function :crypto_box_beforenm,       [:buffer_out, :buffer_in, :buffer_in],  :int
 
     module_function
 
@@ -123,17 +123,17 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      decrypted = zeros(ciphertext_len - MACBYTES)
+      message = zeros(ciphertext_len - MACBYTES)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      if crypto_box_open_easy(decrypted, ciphertext, ciphertext_len, nonce, public_key, secret_key) == -1
+      if crypto_box_open_easy(message, ciphertext, ciphertext_len, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
       if encoding
-        decrypted.force_encoding(encoding)
+        message.force_encoding(encoding)
       end
 
-      decrypted
+      message
     ensure
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end
@@ -202,17 +202,17 @@ module Crypto
       check_length(public_key, PUBLICKEYBYTES, :PublicKey)
       check_length(secret_key, SECRETKEYBYTES, :SecretKey)
 
-      decrypted = zeros(ciphertext_len)
+      message = zeros(ciphertext_len)
       secret_key.readonly if secret_key.is_a?(Sodium::SecretBuffer)
-      if crypto_box_open_detached(decrypted, ciphertext, mac, ciphertext_len, nonce, public_key, secret_key) == -1
+      if crypto_box_open_detached(message, ciphertext, mac, ciphertext_len, nonce, public_key, secret_key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
       if encoding
-        decrypted.force_encoding(encoding)
+        message.force_encoding(encoding)
       end
 
-      decrypted
+      message
     ensure
       secret_key.noaccess if secret_key.is_a?(Sodium::SecretBuffer)
     end

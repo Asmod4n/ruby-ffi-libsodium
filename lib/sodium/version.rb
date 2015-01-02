@@ -1,3 +1,3 @@
 ﻿module Sodium
-  VERSION = Gem::Version.new('0.4.5')
+  VERSION = Gem::Version.new('0.4.6')
 end

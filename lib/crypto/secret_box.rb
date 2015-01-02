@@ -115,7 +115,7 @@ module Crypto
       ciphertext = zeros(message_len)
       mac = zeros(MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_secretbox_easy(ciphertext, mac, message, message_len, nonce, key)
+      crypto_secretbox_detached(ciphertext, mac, message, message_len, nonce, key)
 
       [ciphertext, mac]
     ensure
@@ -128,17 +128,17 @@ module Crypto
       check_length(nonce, NONCEBYTES, :Nonce)
       check_length(key, KEYBYTES, :SecretKey)
 
-      decrypted = zeros(ciphertext_len)
+      message = zeros(ciphertext_len)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      if crypto_secretbox_open_easy(decrypted, ciphertext, mac, ciphertext_len, nonce, key) == -1
+      if crypto_secretbox_open_detached(message, ciphertext, mac, ciphertext_len, nonce, key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
       if encoding
-        decrypted.force_encoding(encoding)
+        message.force_encoding(encoding)
       end
 
-      decrypted
+      message
     ensure
       key.noaccess if key.is_a?(Sodium::SecretBuffer)
     end
@@ -149,7 +149,7 @@ module Crypto
 
       mac = zeros(MACBYTES)
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      crypto_secretbox_easy(message, message, mac, get_size(message), nonce, key)
+      crypto_secretbox_detached(message, mac, message, get_size(message), nonce, key)
 
       [message, mac]
     ensure
@@ -162,7 +162,7 @@ module Crypto
       check_length(key, KEYBYTES, :SecretKey)
 
       key.readonly if key.is_a?(Sodium::SecretBuffer)
-      if crypto_secretbox_open_easy(ciphertext, ciphertext, mac, get_size(ciphertext), nonce, key) == -1
+      if crypto_secretbox_open_detached(ciphertext, ciphertext, mac, get_size(ciphertext), nonce, key) == -1
         raise Sodium::CryptoError, "Message forged", caller
       end
 
